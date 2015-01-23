@@ -2,15 +2,21 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	_ "github.com/go-sql-driver/mysql"
+	"strconv"
 	"strings"
 )
 
+type Host struct {
+	db     *sql.DB
+	dbname string
+}
+
 // Common for each of the db datastructures used here
 type dbDatastructure struct {
-	host   *sql.DB
-	id     string
-	dbname string
+	host  *Host
+	table string
 }
 
 type (
@@ -23,7 +29,7 @@ type (
 const (
 	// Version number. Stable API within major version numbers.
 	Version = 1.0
-	// The default host:port that the database is running at
+	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = "go:go@/"
 	defaultDatabaseName   = "main"
 	defaultStringLength   = 255
@@ -31,29 +37,18 @@ const (
 
 /* --- Helper functions --- */
 
-// Get a string from a list of results at a given position
-func getString(bi []interface{}, i int) string {
-	return string(bi[i].([]uint8))
-}
-
 // Test if the local database server is up and running
 func TestConnection() (err error) {
 	return TestConnectionHost(defaultDatabaseServer)
 }
 
 // Test if a given database server at host:port is up and running.
-// Does not try to PING or AUTH.
+// Also pings.
 func TestConnectionHost(hostColonPort string) (err error) {
 	// Connect to the given host:port
 	db, err := sql.Open("mysql", hostColonPort)
 	defer db.Close()
 	return db.Ping()
-}
-
-/* --- Host functions --- */
-
-func New() *sql.DB {
-	return NewHost(defaultDatabaseServer)
 }
 
 // Split a string into two parts, given a delimiter.
@@ -66,56 +61,105 @@ func twoFields(s, delim string) (string, string, bool) {
 	return fields[0], fields[1], true
 }
 
-// Create a new connection host given a host:port string.
-// Other options may be supplied on the form "username:password@host:port/database".
-func NewHost(hostColonPort string) *sql.DB {
+/* --- Host functions --- */
+
+// Create a new database connection.
+// connectionString may be on the form "username:password@host:port/database".
+func New(connectionString string) *Host {
+	// TODO: Find better variable names for these
+	dbname := defaultDatabaseName
+	hostColonPort := connectionString
+	// Extract the database name, if given
+	if first, second, ok := twoFields(hostColonPort, "/"); ok {
+		if strings.TrimSpace(second) != "" {
+			dbname = second
+		}
+		hostColonPort = first + "/"
+	}
 	db, err := sql.Open("mysql", hostColonPort)
 	if err != nil {
 		panic("Could not connect to " + defaultDatabaseServer + "!")
 	}
-	return db
+	host := &Host{db, dbname}
+	if err := db.Ping(); err != nil {
+		panic("Database does not reply to ping: " + err.Error())
+	}
+	if err := host.createDatabase(); err != nil {
+		panic("Could not create database " + host.dbname + ": " + err.Error())
+	}
+	if err := host.useDatabase(); err != nil {
+		panic("Could not use database " + host.dbname + ": " + err.Error())
+	}
+	return host
+}
+
+// The default database connection
+func NewLocalHost() *Host {
+	return New(defaultDatabaseServer + defaultDatabaseName)
+}
+
+// Select a different database. Create the database if needed.
+func (host *Host) SelectDatabase(dbname string) error {
+	host.dbname = dbname
+	if err := host.createDatabase(); err != nil {
+		return err
+	}
+	if err := host.useDatabase(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Will create the database if it does not already exist.
+func (host *Host) createDatabase() error {
+	if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = utf8"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Use the host.dbname database.
+func (host *Host) useDatabase() error {
+	if _, err := host.db.Exec("USE " + host.dbname); err != nil {
+		return err
+	}
+	return nil
 }
 
 /* --- List functions --- */
-
 // Create a new list
-func NewList(host *sql.DB, id, dbname string) *List {
-	l := &List{host, id, dbname}
-	l.SelectDatabase(l.dbname)
-	if _, err := l.host.Exec("CREATE TABLE IF NOT EXISTS " + id + " (value CHAR)"); err != nil {
-		panic(err.Error()) // proper error handling instead of panic in your app
+func NewList(host *Host, table string) *List {
+	l := &List{host, table}
+	// list is the name of the column
+	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + table + " (list VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+		// This is more likely to happen at the start of the program,
+		// hence the panic.
+		panic("Could not create table " + table + ": " + err.Error())
 	}
 	return l
 }
 
-// Select a different database
-func (rl *List) SelectDatabase(dbname string) {
-	if _, err := rl.host.Exec("CREATE DATABASE IF NOT EXISTS " + dbname + " CHARACTER SET = utf8"); err != nil {
-		panic(err.Error())
-	}
-	if _, err := rl.host.Exec("USE " + dbname); err != nil {
-		panic(err.Error())
-	}
-	rl.dbname = dbname
-}
-
 // Add an element to the list
 func (rl *List) Add(value string) error {
-	_, err := rl.host.Exec("INSERT INTO " + rl.id + " VALUES ('" + value + "')")
+	// list is the name of the column
+	_, err := rl.host.db.Exec("INSERT INTO "+rl.table+" (list) VALUES (?)", value)
 	return err
 }
 
 // Get all elements of a list
-func (rl *List) GetAll() (values []string, err error) {
-	rows, err := rl.host.Query("SELECT * FROM " + rl.id)
+func (rl *List) GetAll() ([]string, error) {
+	rows, err := rl.host.db.Query("SELECT * FROM " + rl.table)
 	if err != nil {
 		panic(err.Error())
 	}
 	defer rows.Close()
+	var (
+		values []string
+		value  string
+	)
 	for rows.Next() {
-		var value string
 		err = rows.Scan(&value)
-		values = append(values, string(value))
+		values = append(values, value)
 		if err != nil {
 			panic(err.Error())
 		}
@@ -128,37 +172,48 @@ func (rl *List) GetAll() (values []string, err error) {
 
 // Get the last element of a list
 func (rl *List) GetLast() (string, error) {
-	//result, err := db.Values(db.Do("LRANGE", rl.id, "-1", "-1"))
-	//if len(result) == 1 {
-	//	return getString(result, 0), err
-	//}
-	//return "", err
-	return "", nil
+	rows, err := rl.host.db.Query("SELECT * FROM " + rl.table)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var value string
+	for rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
+	}
+	return value, nil
 }
 
 // Get the last N elements of a list
 func (rl *List) GetLastN(n int) ([]string, error) {
-	//result, err := db.Values(db.Do("LRANGE", rl.id, "-"+strconv.Itoa(n), "-1"))
-	//strs := make([]string, len(result))
-	//for i := 0; i < len(result); i++ {
-	//	strs[i] = getString(result, i)
-	//}
-	//return strs, err
-	return []string{}, nil
+	values, err := rl.GetAll()
+	if err != nil {
+		return []string{}, err
+	}
+	if len(values) < n {
+		return []string{}, errors.New("Too few elements in table at GetLastN")
+	}
+	return values[len(values)-n:], nil
 }
 
 // Remove this list
 func (rl *List) Remove() error {
-	//_, err := db.Do("DEL", rl.id)
-	//return err
-	return nil
+	// Remove the table
+	_, err := rl.host.db.Exec("DROP TABLE " + rl.table)
+	return err
 }
 
 /* --- Set functions --- */
 
 //// Create a new set
-//func NewSet(host *sql.DB, id string) *Set {
-//	return &Set{host, id, defaultDatabaseName}
+//func NewSet(host *sql.DB, table string) *Set {
+//	return &Set{host, table, defaultDatabaseName}
 //}
 //
 //// Select a different database
@@ -169,14 +224,14 @@ func (rl *List) Remove() error {
 //// Add an element to the set
 //func (rs *Set) Add(value string) error {
 //	db := rs.host.Get(rs.dbname)
-//	_, err := db.Do("SADD", rs.id, value)
+//	_, err := db.Do("SADD", rs.table, value)
 //	return err
 //}
 //
 //// Check if a given value is in the set
 //func (rs *Set) Has(value string) (bool, error) {
 //	db := rs.host.Get(rs.dbname)
-//	retval, err := db.Do("SISMEMBER", rs.id, value)
+//	retval, err := db.Do("SISMEMBER", rs.table, value)
 //	if err != nil {
 //		panic(err)
 //	}
@@ -186,7 +241,7 @@ func (rl *List) Remove() error {
 //// Get all elements of the set
 //func (rs *Set) GetAll() ([]string, error) {
 //	db := rs.host.Get(rs.dbname)
-//	result, err := db.Values(db.Do("SMEMBERS", rs.id))
+//	result, err := db.Values(db.Do("SMEMBERS", rs.table))
 //	strs := make([]string, len(result))
 //	for i := 0; i < len(result); i++ {
 //		strs[i] = getString(result, i)
@@ -197,22 +252,22 @@ func (rl *List) Remove() error {
 //// Remove an element from the set
 //func (rs *Set) Del(value string) error {
 //	db := rs.host.Get(rs.dbname)
-//	_, err := db.Do("SREM", rs.id, value)
+//	_, err := db.Do("SREM", rs.table, value)
 //	return err
 //}
 //
 //// Remove this set
 //func (rs *Set) Remove() error {
 //	db := rs.host.Get(rs.dbname)
-//	_, err := db.Do("DEL", rs.id)
+//	_, err := db.Do("DEL", rs.table)
 //	return err
 //}
 //
 ///* --- HashMap functions --- */
 //
 //// Create a new hashmap
-//func NewHashMap(host *sql.DB, id string) *HashMap {
-//	return &HashMap{host, id, defaultDatabaseName}
+//func NewHashMap(host *sql.DB, table string) *HashMap {
+//	return &HashMap{host, table, defaultDatabaseName}
 //}
 //
 //// Select a different database
@@ -223,14 +278,14 @@ func (rl *List) Remove() error {
 //// Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 //func (rh *HashMap) Set(elementid, key, value string) error {
 //	db := rh.host.Get(rh.dbname)
-//	_, err := db.Do("HSET", rh.id+":"+elementid, key, value)
+//	_, err := db.Do("HSET", rh.table+":"+elementid, key, value)
 //	return err
 //}
 //
 //// Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password")
 //func (rh *HashMap) Get(elementid, key string) (string, error) {
 //	db := rh.host.Get(rh.dbname)
-//	result, err := db.String(db.Do("HGET", rh.id+":"+elementid, key))
+//	result, err := db.String(db.Do("HGET", rh.table+":"+elementid, key))
 //	if err != nil {
 //		return "", err
 //	}
@@ -240,7 +295,7 @@ func (rl *List) Remove() error {
 //// Check if a given elementid + key is in the hash map
 //func (rh *HashMap) Has(elementid, key string) (bool, error) {
 //	db := rh.host.Get(rh.dbname)
-//	retval, err := db.Do("HEXISTS", rh.id+":"+elementid, key)
+//	retval, err := db.Do("HEXISTS", rh.table+":"+elementid, key)
 //	if err != nil {
 //		panic(err)
 //	}
@@ -250,15 +305,15 @@ func (rl *List) Remove() error {
 //// Check if a given elementid exists as a hash map at all
 //func (rh *HashMap) Exists(elementid string) (bool, error) {
 //	// TODO: key is not meant to be a wildcard, check for "*"
-//	return hasKey(rh.host, rh.id+":"+elementid, rh.dbname)
+//	return hasKey(rh.host, rh.table+":"+elementid, rh.dbname)
 //}
 //
 //// Get all elementid's for all hash elements
 //func (rh *HashMap) GetAll() ([]string, error) {
 //	db := rh.host.Get(rh.dbname)
-//	result, err := db.Values(db.Do("KEYS", rh.id+":*"))
+//	result, err := db.Values(db.Do("KEYS", rh.table+":*"))
 //	strs := make([]string, len(result))
-//	idlen := len(rh.id)
+//	idlen := len(rh.table)
 //	for i := 0; i < len(result); i++ {
 //		strs[i] = getString(result, i)[idlen+1:]
 //	}
@@ -268,29 +323,29 @@ func (rl *List) Remove() error {
 //// Remove a key for an entry in a hashmap (for instance the email field for a user)
 //func (rh *HashMap) DelKey(elementid, key string) error {
 //	db := rh.host.Get(rh.dbname)
-//	_, err := db.Do("HDEL", rh.id+":"+elementid, key)
+//	_, err := db.Do("HDEL", rh.table+":"+elementid, key)
 //	return err
 //}
 //
 //// Remove an element (for instance a user)
 //func (rh *HashMap) Del(elementid string) error {
 //	db := rh.host.Get(rh.dbname)
-//	_, err := db.Do("DEL", rh.id+":"+elementid)
+//	_, err := db.Do("DEL", rh.table+":"+elementid)
 //	return err
 //}
 //
 //// Remove this hashmap
 //func (rh *HashMap) Remove() error {
 //	db := rh.host.Get(rh.dbname)
-//	_, err := db.Do("DEL", rh.id)
+//	_, err := db.Do("DEL", rh.table)
 //	return err
 //}
 //
 ///* --- KeyValue functions --- */
 //
 //// Create a new key/value
-//func NewKeyValue(host *sql.DB, id string) *KeyValue {
-//	return &KeyValue{host, id, defaultDatabaseName}
+//func NewKeyValue(host *sql.DB, table string) *KeyValue {
+//	return &KeyValue{host, table, defaultDatabaseName}
 //}
 //
 //// Select a different database
@@ -301,14 +356,14 @@ func (rl *List) Remove() error {
 //// Set a key and value
 //func (rkv *KeyValue) Set(key, value string) error {
 //	db := rkv.host.Get(rkv.dbname)
-//	_, err := db.Do("SET", rkv.id+":"+key, value)
+//	_, err := db.Do("SET", rkv.table+":"+key, value)
 //	return err
 //}
 //
 //// Get a value given a key
 //func (rkv *KeyValue) Get(key string) (string, error) {
 //	db := rkv.host.Get(rkv.dbname)
-//	result, err := db.String(db.Do("GET", rkv.id+":"+key))
+//	result, err := db.String(db.Do("GET", rkv.table+":"+key))
 //	if err != nil {
 //		return "", err
 //	}
@@ -318,14 +373,14 @@ func (rl *List) Remove() error {
 //// Remove a key
 //func (rkv *KeyValue) Del(key string) error {
 //	db := rkv.host.Get(rkv.dbname)
-//	_, err := db.Do("DEL", rkv.id+":"+key)
+//	_, err := db.Do("DEL", rkv.table+":"+key)
 //	return err
 //}
 //
 //// Remove this key/value
 //func (rkv *KeyValue) Remove() error {
 //	db := rkv.host.Get(rkv.dbname)
-//	_, err := db.Do("DEL", rkv.id)
+//	_, err := db.Do("DEL", rkv.table)
 //	return err
 //}
 //

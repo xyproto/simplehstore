@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"testing"
 )
 
@@ -11,18 +10,13 @@ func TestLocalConnection(t *testing.T) {
 	}
 }
 
-var host *sql.DB
-
-func TestNew(t *testing.T) {
-	host = New()
-}
-
 func TestList(t *testing.T) {
 	const (
 		listname = "abc123_test_test_test_123abc"
 		testdata = "123abc"
 	)
-	list := NewList(host, listname, "main")
+	host := NewLocalHost() // go:go@localhost/main
+	list := NewList(host, listname)
 	if err := list.Add(testdata); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
