@@ -1,4 +1,4 @@
-package simpleredis
+package simpledb
 
 import (
 	"testing"
