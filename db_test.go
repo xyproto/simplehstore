@@ -1,12 +1,9 @@
-package simpledb
+package db
 
 import (
 	"testing"
+	"database/sql"
 )
-
-// TODO: Add tests for all the datatypes and, ideally, all the available functions
-
-var pool *ConnectionPool
 
 func TestLocalConnection(t *testing.T) {
 	if err := TestConnection(); err != nil {
@@ -14,27 +11,10 @@ func TestLocalConnection(t *testing.T) {
 	}
 }
 
-func TestRemoteConnection(t *testing.T) {
-	if err := TestConnectionHost("foobared@ :6379"); err != nil {
-		t.Errorf(err.Error())
-	}
-}
+var host *sql.DB
 
-func TestConnectionPool(t *testing.T) {
-	pool = NewConnectionPool()
-}
-
-func TestConnectionPoolHost(t *testing.T) {
-	pool = NewConnectionPoolHost("localhost:6379")
-}
-
-// Tests with password "foobared" if the previous connection test
-// did not result in a connection that responds to PING.
-func TestConnectionPoolHostPassword(t *testing.T) {
-	if !pool.Ping() {
-		// Try connecting with the default password
-		pool = NewConnectionPoolHost("foobared@localhost:6379")
-	}
+func TestNew(t *testing.T) {
+	host = New()
 }
 
 func TestList(t *testing.T) {
@@ -42,21 +22,23 @@ func TestList(t *testing.T) {
 		listname = "abc123_test_test_test_123abc"
 		testdata = "123abc"
 	)
-	list := NewList(pool, listname)
-	list.SelectDatabase(1)
+	list := NewList(host, listname)
 	if err := list.Add(testdata); err != nil {
-		t.Errorf("Error, could not add item to list! %s", err)
+		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
 	items, err := list.GetAll()
+	if err != nil {
+		t.Error("Error, wrong list length!")
+	}
 	if len(items) != 1 {
-		t.Errorf("Error, wrong list length! %s", err)
+		t.Errorf("Error, wrong list length! %s", err.Error())
 	}
 	if (len(items) > 0) && (items[0] != testdata) {
-		t.Errorf("Error, wrong list contents! %s", err)
+		t.Error("Error, wrong list contents!")
 	}
 	err = list.Remove()
 	if err != nil {
-		t.Errorf("Error, could not remove list! %s", err)
+		t.Errorf("Error, could not remove list! %s", err.Error())
 	}
 }
 
