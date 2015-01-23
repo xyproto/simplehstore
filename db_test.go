@@ -31,10 +31,10 @@ func TestList(t *testing.T) {
 		t.Errorf("Error when retrieving list! %s", err.Error())
 	}
 	if len(items) != 1 {
-		t.Error("Error, wrong list length!")
+		t.Errorf("Error, wrong list length! %v", len(items))
 	}
 	if (len(items) > 0) && (items[0] != testdata) {
-		t.Error("Error, wrong list contents!")
+		t.Errorf("Error, wrong list contents! %v", items)
 	}
 	err = list.Remove()
 	if err != nil {
