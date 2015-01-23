@@ -1,8 +1,8 @@
 package db
 
 import (
-	"testing"
 	"database/sql"
+	"testing"
 )
 
 func TestLocalConnection(t *testing.T) {
@@ -22,16 +22,16 @@ func TestList(t *testing.T) {
 		listname = "abc123_test_test_test_123abc"
 		testdata = "123abc"
 	)
-	list := NewList(host, listname)
+	list := NewList(host, listname, "main")
 	if err := list.Add(testdata); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
 	items, err := list.GetAll()
 	if err != nil {
-		t.Error("Error, wrong list length!")
+		t.Errorf("Error when retrieving list! %s", err.Error())
 	}
 	if len(items) != 1 {
-		t.Errorf("Error, wrong list length! %s", err.Error())
+		t.Error("Error, wrong list length!")
 	}
 	if (len(items) > 0) && (items[0] != testdata) {
 		t.Error("Error, wrong list contents!")

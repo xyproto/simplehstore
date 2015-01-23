@@ -1,16 +1,16 @@
 package db
 
 import (
-	"strings"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
+	"strings"
 )
 
 // Common for each of the db datastructures used here
 type dbDatastructure struct {
-	host    *sql.DB
-	id      string
-	dbname  string
+	host   *sql.DB
+	id     string
+	dbname string
 }
 
 type (
@@ -25,8 +25,8 @@ const (
 	Version = 1.0
 	// The default host:port that the database is running at
 	defaultDatabaseServer = "go:go@/"
-	defaultDatabaseName = "main"
-	defaultStringLength = 255
+	defaultDatabaseName   = "main"
+	defaultStringLength   = 255
 )
 
 /* --- Helper functions --- */
@@ -79,12 +79,12 @@ func NewHost(hostColonPort string) *sql.DB {
 /* --- List functions --- */
 
 // Create a new list
-func NewList(host *sql.DB, id string) *List {
-	l := &List{host, id, defaultDatabaseName}
+func NewList(host *sql.DB, id, dbname string) *List {
+	l := &List{host, id, dbname}
 	l.SelectDatabase(l.dbname)
 	if _, err := l.host.Exec("CREATE TABLE IF NOT EXISTS " + id + " (value CHAR)"); err != nil {
-        panic(err.Error()) // proper error handling instead of panic in your app
-    }
+		panic(err.Error()) // proper error handling instead of panic in your app
+	}
 	return l
 }
 
