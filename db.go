@@ -33,7 +33,7 @@ const (
 	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = ""     // "username:password@server:port/"
 	defaultDatabaseName   = "test" // "main"
-	defaultStringLength   = 255
+	defaultStringLength   = 42     // using VARCHAR, so this will be expanded up to 65535 characters as needed, unless mysql strict mode is enabled
 )
 
 /* --- Helper functions --- */
@@ -142,7 +142,8 @@ func (host *Host) useDatabase() error {
 }
 
 /* --- List functions --- */
-// Create a new list
+
+// Create a new list. Lists are ordered.
 func NewList(host *Host, table string) *List {
 	l := &List{host, table}
 	// list is the name of the column
