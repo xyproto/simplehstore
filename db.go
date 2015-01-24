@@ -199,7 +199,6 @@ func (rl *List) GetLast() (string, error) {
 	var value string
 	// Get the value. Will only loop once.
 	for rows.Next() {
-		log.Println(".")
 		err = rows.Scan(&value)
 		if err != nil {
 			panic(err.Error())
@@ -213,6 +212,7 @@ func (rl *List) GetLast() (string, error) {
 
 // Get the last N elements of a list
 func (rl *List) GetLastN(n int) ([]string, error) {
+	// TODO: http://stackoverflow.com/a/574148/131264 instead of GetAll()
 	values, err := rl.GetAll()
 	if err != nil {
 		return []string{}, err
