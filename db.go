@@ -147,7 +147,7 @@ func (host *Host) useDatabase() error {
 func NewList(host *Host, table string) *List {
 	l := &List{host, table}
 	// list is the name of the column
-	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + table + " (list VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + table + " (id INT PRIMARY KEY AUTO_INCREMENT, list VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		// This is more likely to happen at the start of the program,
 		// hence the panic.
 		panic("Could not create table " + table + ": " + err.Error())
@@ -165,7 +165,7 @@ func (rl *List) Add(value string) error {
 
 // Get all elements of a list
 func (rl *List) GetAll() ([]string, error) {
-	rows, err := rl.host.db.Query("SELECT * FROM " + rl.table)
+	rows, err := rl.host.db.Query("SELECT list FROM " + rl.table + " ORDER BY id")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -189,13 +189,17 @@ func (rl *List) GetAll() ([]string, error) {
 
 // Get the last element of a list
 func (rl *List) GetLast() (string, error) {
-	rows, err := rl.host.db.Query("SELECT * FROM " + rl.table)
+	// Fetches the item with the largest id.
+	// Faster than "ORDER BY id DESC limit 1" for large tables.
+	rows, err := rl.host.db.Query("SELECT list FROM " + rl.table + " WHERE id = (SELECT MAX(id) FROM " + rl.table + ")")
 	if err != nil {
 		panic(err.Error())
 	}
 	defer rows.Close()
 	var value string
+	// Get the value. Will only loop once.
 	for rows.Next() {
+		log.Println(".")
 		err = rows.Scan(&value)
 		if err != nil {
 			panic(err.Error())
