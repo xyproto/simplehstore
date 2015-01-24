@@ -4,6 +4,13 @@ import (
 	"testing"
 )
 
+const (
+	listname  = "testlist"
+	testdata1 = "abc123"
+	testdata2 = "def456"
+	testdata3 = "ghi789"
+)
+
 func TestLocalConnection(t *testing.T) {
 	if err := TestConnection(); err != nil {
 		t.Errorf(err.Error())
@@ -11,13 +18,10 @@ func TestLocalConnection(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	const (
-		listname = "abc123_test_test_test_123abc"
-		testdata = "123abc"
-	)
 	host := NewLocalHost() // go:go@localhost/main
 	list := NewList(host, listname)
-	if err := list.Add(testdata); err != nil {
+	list.Clear()
+	if err := list.Add(testdata1); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
 	items, err := list.GetAll()
@@ -27,8 +31,38 @@ func TestList(t *testing.T) {
 	if len(items) != 1 {
 		t.Errorf("Error, wrong list length! %v", len(items))
 	}
-	if (len(items) > 0) && (items[0] != testdata) {
+	if (len(items) > 0) && (items[0] != testdata1) {
 		t.Errorf("Error, wrong list contents! %v", items)
+	}
+	if err := list.Add(testdata2); err != nil {
+		t.Errorf("Error, could not add item to list! %s", err.Error())
+	}
+	if err := list.Add(testdata3); err != nil {
+		t.Errorf("Error, could not add item to list! %s", err.Error())
+	}
+	items, err = list.GetAll()
+	if err != nil {
+		t.Errorf("Error when retrieving list! %s", err.Error())
+	}
+	if len(items) != 3 {
+		t.Errorf("Error, wrong list length! %v", len(items))
+	}
+	item, err := list.GetLast()
+	if err != nil {
+		t.Errorf("Error, could not get last item from list! %s", err.Error())
+	}
+	if item != testdata3 {
+		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata3, item)
+	}
+	items, err = list.GetLastN(2)
+	if err != nil {
+		t.Errorf("Error, could not get last N items from list! %s", err.Error())
+	}
+	if len(items) != 2 {
+		t.Errorf("Error, wrong list length! %v", len(items))
+	}
+	if items[0] != testdata2 {
+		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata2, items[1])
 	}
 	err = list.Remove()
 	if err != nil {

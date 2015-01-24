@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	_ "github.com/go-sql-driver/mysql"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -30,8 +31,8 @@ const (
 	// Version number. Stable API within major version numbers.
 	Version = 1.0
 	// The default "username:password@host:port/database" that the database is running at
-	defaultDatabaseServer = "go:go@/"
-	defaultDatabaseName   = "main"
+	defaultDatabaseServer = ""     // "username:password@server:port/"
+	defaultDatabaseName   = "test" // "main"
 	defaultStringLength   = 255
 )
 
@@ -75,6 +76,14 @@ func New(connectionString string) *Host {
 			dbname = second
 		}
 		hostColonPort = first + "/"
+	} else if !strings.HasSuffix(hostColonPort, "/") {
+		// Add a trailing slash, if missing
+		hostColonPort += "/"
+	}
+	if strings.TrimSpace(hostColonPort) == "/" {
+		log.Println("Connecting to local database instance")
+	} else {
+		log.Println("Connecting to host: " + hostColonPort)
 	}
 	db, err := sql.Open("mysql", hostColonPort)
 	if err != nil {
@@ -95,7 +104,11 @@ func New(connectionString string) *Host {
 
 // The default database connection
 func NewLocalHost() *Host {
-	return New(defaultDatabaseServer + defaultDatabaseName)
+	connectionString := defaultDatabaseServer + defaultDatabaseName
+	if !strings.HasSuffix(defaultDatabaseServer, "/") {
+		connectionString = defaultDatabaseServer + "/" + defaultDatabaseName
+	}
+	return New(connectionString)
 }
 
 // Select a different database. Create the database if needed.
@@ -115,6 +128,7 @@ func (host *Host) createDatabase() error {
 	if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = utf8"); err != nil {
 		return err
 	}
+	log.Println("Created database " + host.dbname)
 	return nil
 }
 
@@ -123,6 +137,7 @@ func (host *Host) useDatabase() error {
 	if _, err := host.db.Exec("USE " + host.dbname); err != nil {
 		return err
 	}
+	log.Println("Using database " + host.dbname)
 	return nil
 }
 
@@ -136,6 +151,7 @@ func NewList(host *Host, table string) *List {
 		// hence the panic.
 		panic("Could not create table " + table + ": " + err.Error())
 	}
+	log.Println("Created table " + table + " in database " + host.dbname)
 	return l
 }
 
@@ -206,6 +222,13 @@ func (rl *List) GetLastN(n int) ([]string, error) {
 func (rl *List) Remove() error {
 	// Remove the table
 	_, err := rl.host.db.Exec("DROP TABLE " + rl.table)
+	return err
+}
+
+// Clear the list contents
+func (rl *List) Clear() error {
+	// Clear the table
+	_, err := rl.host.db.Exec("TRUNCATE TABLE " + rl.table)
 	return err
 }
 
