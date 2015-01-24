@@ -19,10 +19,10 @@ func main() {
 	host := db.New()
 
 	// Use this for connecting to a different db host/port
-	// host := db.NewHost("localhost:3306")
+	//host := db.NewHost("server:3306/db")
 
 	// For connecting to a different db host/port, with a password
-	// host := db.NewHost("password@dbhost:3306")
+	// host := db.NewHost("password@server/db")
 
 	// Close the connection host right after this function returns
 	defer host.Close()

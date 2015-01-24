@@ -66,7 +66,7 @@ func twoFields(s, delim string) (string, string, bool) {
 
 // Create a new database connection.
 // connectionString may be on the form "username:password@host:port/database".
-func New(connectionString string) *Host {
+func NewHost(connectionString string) *Host {
 	// TODO: Find better variable names for these
 	dbname := defaultDatabaseName
 	hostColonPort := connectionString
@@ -103,12 +103,12 @@ func New(connectionString string) *Host {
 }
 
 // The default database connection
-func NewLocalHost() *Host {
+func New() *Host {
 	connectionString := defaultDatabaseServer + defaultDatabaseName
 	if !strings.HasSuffix(defaultDatabaseServer, "/") {
 		connectionString = defaultDatabaseServer + "/" + defaultDatabaseName
 	}
-	return New(connectionString)
+	return NewHost(connectionString)
 }
 
 // Select a different database. Create the database if needed.
@@ -139,6 +139,11 @@ func (host *Host) useDatabase() error {
 	}
 	log.Println("Using database " + host.dbname)
 	return nil
+}
+
+// Close the connection.
+func (host *Host) Close() {
+	host.db.Close()
 }
 
 /* --- List functions --- */

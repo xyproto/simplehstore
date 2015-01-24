@@ -18,7 +18,9 @@ func TestLocalConnection(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	host := NewLocalHost() // go:go@localhost/main
+	host := New()
+	// host := NewHost("go:go@localhost/main")
+	defer host.Close()
 	list := NewList(host, listname)
 	list.Clear()
 	if err := list.Add(testdata1); err != nil {
