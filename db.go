@@ -87,11 +87,11 @@ func NewHost(connectionString string) *Host {
 	}
 	db, err := sql.Open("mysql", hostColonPort)
 	if err != nil {
-		panic("Could not connect to " + defaultDatabaseServer + "!")
+		log.Fatalln("Could not connect to " + defaultDatabaseServer + "!")
 	}
 	host := &Host{db, dbname}
 	if err := db.Ping(); err != nil {
-		panic("Database does not reply to ping: " + err.Error())
+		log.Fatalln("Database does not reply to ping: " + err.Error())
 	}
 	if err := host.createDatabase(); err != nil {
 		panic("Could not create database " + host.dbname + ": " + err.Error())
