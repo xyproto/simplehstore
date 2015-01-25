@@ -138,16 +138,16 @@ func (host *Host) Close() {
 /* --- List functions --- */
 
 // Create a new list. Lists are ordered.
-func NewList(host *Host, table string) *List {
-	l := &List{host, table}
+func NewList(host *Host, name string) *List {
+	l := &List{host, name}
 	// list is the name of the column
-	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + table + " (id INT PRIMARY KEY AUTO_INCREMENT, list VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id INT PRIMARY KEY AUTO_INCREMENT, list VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		// This is more likely to happen at the start of the program,
 		// hence the panic.
-		panic("Could not create table " + table + ": " + err.Error())
+		panic("Could not create table " + name + ": " + err.Error())
 	}
 	if Verbose {
-		log.Println("Created table " + table + " in database " + host.dbname)
+		log.Println("Created table " + name + " in database " + host.dbname)
 	}
 	return l
 }
