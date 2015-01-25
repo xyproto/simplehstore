@@ -47,10 +47,17 @@ func TestConnection() (err error) {
 // Test if a given database server at host:port is up and running.
 // Also pings.
 func TestConnectionHost(connectionString string) (err error) {
+	newConnectionString, _ := rebuildConnectionString(connectionString)
 	// Connect to the given host:port
-	db, err := sql.Open("mysql", connectionString)
+	db, err := sql.Open("mysql", newConnectionString)
 	defer db.Close()
-	return db.Ping()
+	err = db.Ping()
+	if err != nil {
+		log.Println("Ping: failed")
+	} else {
+		log.Println("Ping: ok")
+	}
+	return err
 }
 
 // Split a string into two parts, given a delimiter.
@@ -79,12 +86,12 @@ func rightOf(s, delim string) string {
 	return ""
 }
 
-// Create a new database connection.
-// connectionString may be on the form "username:password@host:port/database".
-func NewHost(connectionString string) *Host {
+// Parse a DSN
+func splitConnectionString(connectionString string) (string, string, bool, string, string, string) {
 	var (
-		userPass, hostPortDatabase, dbname, hostPort, password, username, port, hostname string
-		hasPassword                                                                      bool
+		userPass, hostPortDatabase, dbname       string
+		hostPort, password, username, port, host string
+		hasPassword                              bool
 	)
 
 	// Gather the fields
@@ -127,32 +134,40 @@ func NewHost(connectionString string) *Host {
 	// Optional right side of : with port
 	port = rightOf(hostPort, ":")
 	if port != "" {
-		hostname = leftOf(hostPort, ":")
+		host = leftOf(hostPort, ":")
 	} else {
 		if strings.HasSuffix(hostPort, ":") {
-			hostname = hostPort[:len(hostPort)-1]
+			host = hostPort[:len(hostPort)-1]
 		} else {
-			hostname = hostPort
+			host = hostPort
 		}
-		if hostname != "" {
+		if host != "" {
 			port = strconv.Itoa(defaultPort)
 		}
 	}
 
-	log.Println("username:\t\t", username)
-	log.Println("password:\t\t", password)
-	log.Println("has password:\t", hasPassword)
-	log.Println("host:\t\t", hostname)
-	log.Println("port:\t\t", port)
-	log.Println("dbname:\t\t", dbname)
+	log.Println("Connection:")
+	log.Println("\tusername:\t", username)
+	log.Println("\tpassword:\t", password)
+	log.Println("\thas password:\t", hasPassword)
+	log.Println("\thost:\t\t", host)
+	log.Println("\tport:\t\t", port)
+	log.Println("\tdbname:\t\t", dbname)
+	log.Println()
+
+	return username, password, hasPassword, host, port, dbname
+}
+
+// Build a DSN
+func buildConnectionString(username, password string, hasPassword bool, host, port, dbname string) string {
 
 	// Build the new connection string
 
 	newConnectionString := ""
-	if (hostname != "") && (port != "") {
-		newConnectionString += "tcp(" + hostname + ":" + port + ")"
-	} else if hostname != "" {
-		newConnectionString += "tcp(" + hostname + ")"
+	if (host != "") && (port != "") {
+		newConnectionString += "tcp(" + host + ":" + port + ")"
+	} else if host != "" {
+		newConnectionString += "tcp(" + host + ")"
 	} else if port != "" {
 		newConnectionString += "tcp(" + ":" + port + ")"
 		log.Fatalln("There is only a port. This should not happen.")
@@ -165,7 +180,23 @@ func NewHost(connectionString string) *Host {
 		newConnectionString = ":" + password + "@" + newConnectionString
 	}
 	newConnectionString += "/"
-	log.Println("DSN:\t\t", newConnectionString)
+
+	log.Println("DSN:", newConnectionString)
+
+	return newConnectionString
+}
+
+// Take apart and rebuild the connection string. Also return the dbname.
+func rebuildConnectionString(connectionString string) (string, string) {
+	username, password, hasPassword, hostname, port, dbname := splitConnectionString(connectionString)
+	return buildConnectionString(username, password, hasPassword, hostname, port, dbname), dbname
+}
+
+// Create a new database connection.
+// connectionString may be on the form "username:password@host:port/database".
+func NewHost(connectionString string) *Host {
+
+	newConnectionString, dbname := rebuildConnectionString(connectionString)
 
 	db, err := sql.Open("mysql", newConnectionString)
 	if err != nil {

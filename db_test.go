@@ -12,7 +12,10 @@ const (
 )
 
 func TestLocalConnection(t *testing.T) {
-	if err := TestConnection(); err != nil {
+	//err := TestConnection() // locally
+	err := TestConnectionHost("travis:@127.0.0.1/") // for travis-ci
+	//err := TestConnectionHost("go:go@/main") // laptop
+	if err != nil {
 		t.Errorf(err.Error())
 	}
 }
