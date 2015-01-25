@@ -208,15 +208,29 @@ func (rl *List) GetLast() (string, error) {
 
 // Get the last N elements of a list
 func (rl *List) GetLastN(n int) ([]string, error) {
-	// TODO: http://stackoverflow.com/a/574148/131264 instead of GetAll()
-	values, err := rl.GetAll()
+	rows, err := rl.host.db.Query("SELECT list FROM (SELECT * FROM " + rl.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
 	if err != nil {
-		return []string{}, err
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var (
+		values []string
+		value  string
+	)
+	for rows.Next() {
+		err = rows.Scan(&value)
+		values = append(values, value)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
 	}
 	if len(values) < n {
 		return []string{}, errors.New("Too few elements in table at GetLastN")
 	}
-	return values[len(values)-n:], nil
+	return values, nil
 }
 
 // Remove this list

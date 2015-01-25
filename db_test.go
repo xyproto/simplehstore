@@ -73,7 +73,7 @@ func TestList(t *testing.T) {
 		t.Errorf("Error, wrong list length! %v", len(items))
 	}
 	if items[0] != testdata2 {
-		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata2, items[1])
+		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata2, items[0])
 	}
 	err = list.Remove()
 	if err != nil {
