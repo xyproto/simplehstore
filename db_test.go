@@ -19,12 +19,9 @@ func TestLocalConnection(t *testing.T) {
 
 func TestList(t *testing.T) {
 	//host := New() // locally
-	host := NewHost("root@/main") // for travis-ci
-	//host := NewHost("")
-	//host := NewHost("/")
-	//host := NewHost("/mjaun")
-	//host := NewHost("@/mjaun")
-	//host := NewHost("go:go@/mjaun") // laptop
+	host := NewHost("travis:@/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
+
 	defer host.Close()
 	list := NewList(host, listname)
 	list.Clear()

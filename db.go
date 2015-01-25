@@ -84,6 +84,7 @@ func rightOf(s, delim string) string {
 func NewHost(connectionString string) *Host {
 	var (
 		userPass, hostPortDatabase, dbname, hostPort, password, username, port, hostname string
+		hasPassword                                                                      bool
 	)
 
 	// Gather the fields
@@ -118,6 +119,7 @@ func NewHost(connectionString string) *Host {
 	} else {
 		if strings.HasSuffix(userPass, ":") {
 			username = userPass[:len(userPass)-1]
+			hasPassword = true
 		} else {
 			username = userPass
 		}
@@ -154,11 +156,11 @@ func NewHost(connectionString string) *Host {
 		newConnectionString += "tcp(" + ":" + port + ")"
 		log.Fatalln("There is only a port. This should not happen.")
 	}
-	if (username != "") && (password != "") {
+	if (username != "") && hasPassword {
 		newConnectionString = username + ":" + password + "@" + newConnectionString
 	} else if username != "" {
 		newConnectionString = username + "@" + newConnectionString
-	} else if password != "" {
+	} else if hasPassword {
 		newConnectionString = ":" + password + "@" + newConnectionString
 	}
 	newConnectionString += "/"
