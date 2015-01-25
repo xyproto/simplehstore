@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var Verbose = false
+
 type Host struct {
 	db     *sql.DB
 	dbname string
@@ -52,10 +54,12 @@ func TestConnectionHost(connectionString string) (err error) {
 	db, err := sql.Open("mysql", newConnectionString)
 	defer db.Close()
 	err = db.Ping()
-	if err != nil {
-		log.Println("Ping: failed")
-	} else {
-		log.Println("Ping: ok")
+	if Verbose {
+		if err != nil {
+			log.Println("Ping: failed")
+		} else {
+			log.Println("Ping: ok")
+		}
 	}
 	return err
 }
@@ -146,14 +150,16 @@ func splitConnectionString(connectionString string) (string, string, bool, strin
 		}
 	}
 
-	log.Println("Connection:")
-	log.Println("\tusername:\t", username)
-	log.Println("\tpassword:\t", password)
-	log.Println("\thas password:\t", hasPassword)
-	log.Println("\thost:\t\t", host)
-	log.Println("\tport:\t\t", port)
-	log.Println("\tdbname:\t\t", dbname)
-	log.Println()
+	if Verbose {
+		log.Println("Connection:")
+		log.Println("\tusername:\t", username)
+		log.Println("\tpassword:\t", password)
+		log.Println("\thas password:\t", hasPassword)
+		log.Println("\thost:\t\t", host)
+		log.Println("\tport:\t\t", port)
+		log.Println("\tdbname:\t\t", dbname)
+		log.Println()
+	}
 
 	return username, password, hasPassword, host, port, dbname
 }
@@ -181,7 +187,9 @@ func buildConnectionString(username, password string, hasPassword bool, host, po
 	}
 	newConnectionString += "/"
 
-	log.Println("DSN:", newConnectionString)
+	if Verbose {
+		log.Println("DSN:", newConnectionString)
+	}
 
 	return newConnectionString
 }
@@ -241,7 +249,9 @@ func (host *Host) createDatabase() error {
 	if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = utf8"); err != nil {
 		return err
 	}
-	log.Println("Created database " + host.dbname)
+	if Verbose {
+		log.Println("Created database " + host.dbname)
+	}
 	return nil
 }
 
@@ -250,7 +260,9 @@ func (host *Host) useDatabase() error {
 	if _, err := host.db.Exec("USE " + host.dbname); err != nil {
 		return err
 	}
-	log.Println("Using database " + host.dbname)
+	if Verbose {
+		log.Println("Using database " + host.dbname)
+	}
 	return nil
 }
 
@@ -270,7 +282,9 @@ func NewList(host *Host, table string) *List {
 		// hence the panic.
 		panic("Could not create table " + table + ": " + err.Error())
 	}
-	log.Println("Created table " + table + " in database " + host.dbname)
+	if Verbose {
+		log.Println("Created table " + table + " in database " + host.dbname)
+	}
 	return l
 }
 

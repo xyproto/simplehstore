@@ -12,6 +12,8 @@ const (
 )
 
 func TestLocalConnection(t *testing.T) {
+	Verbose = true
+
 	//err := TestConnection() // locally
 	err := TestConnectionHost("travis:@127.0.0.1/") // for travis-ci
 	//err := TestConnectionHost("go:go@/main") // laptop
@@ -21,6 +23,8 @@ func TestLocalConnection(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
+	Verbose = true
+
 	//host := New() // locally
 	host := NewHost("travis:@127.0.0.1/") // for travis-ci
 	//host := NewHost("go:go@/main") // laptop
