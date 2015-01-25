@@ -19,7 +19,7 @@ func TestLocalConnection(t *testing.T) {
 
 func TestList(t *testing.T) {
 	//host := New() // locally
-	host := NewHost("travis@/main") // for travis-ci
+	host := NewHost("root@/main") // for travis-ci
 	//host := NewHost("")
 	//host := NewHost("/")
 	//host := NewHost("/mjaun")
