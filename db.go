@@ -249,58 +249,102 @@ func (rl *List) Clear() error {
 
 /* --- Set functions --- */
 
-//// Create a new set
-//func NewSet(host *sql.DB, table string) *Set {
-//	return &Set{host, table, defaultDatabaseName}
-//}
-//
-//// Select a different database
-//func (rs *Set) SelectDatabase(dbname string) {
-//	rs.dbname = dbname
-//}
-//
-//// Add an element to the set
-//func (rs *Set) Add(value string) error {
-//	db := rs.host.Get(rs.dbname)
-//	_, err := db.Do("SADD", rs.table, value)
-//	return err
-//}
-//
-//// Check if a given value is in the set
-//func (rs *Set) Has(value string) (bool, error) {
-//	db := rs.host.Get(rs.dbname)
-//	retval, err := db.Do("SISMEMBER", rs.table, value)
-//	if err != nil {
-//		panic(err)
-//	}
-//	return db.Bool(retval, err)
-//}
-//
-//// Get all elements of the set
-//func (rs *Set) GetAll() ([]string, error) {
-//	db := rs.host.Get(rs.dbname)
-//	result, err := db.Values(db.Do("SMEMBERS", rs.table))
-//	strs := make([]string, len(result))
-//	for i := 0; i < len(result); i++ {
-//		strs[i] = getString(result, i)
-//	}
-//	return strs, err
-//}
-//
-//// Remove an element from the set
-//func (rs *Set) Del(value string) error {
-//	db := rs.host.Get(rs.dbname)
-//	_, err := db.Do("SREM", rs.table, value)
-//	return err
-//}
-//
-//// Remove this set
-//func (rs *Set) Remove() error {
-//	db := rs.host.Get(rs.dbname)
-//	_, err := db.Do("DEL", rs.table)
-//	return err
-//}
-//
+// Create a new set
+func NewSet(host *Host, name string) *Set {
+	s := &Set{host, name}
+	// list is the name of the column
+	if _, err := s.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (set VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+		// This is more likely to happen at the start of the program, hence the panic.
+		panic("Could not create table " + name + ": " + err.Error())
+	}
+	if Verbose {
+		log.Println("Created table " + name + " in database " + host.dbname)
+	}
+	return s
+}
+
+// Add an element to the set
+func (s *Set) Add(value string) error {
+	// Check if the value is not already there before adding
+	has, err := s.Has(value)
+	if !has && (err != nil) {
+		// set is the name of the column
+		_, err = s.host.db.Exec("INSERT INTO "+s.table+" (set) VALUES (?)", value)
+	}
+	return err
+}
+
+// Check if a given value is in the set
+func (s *Set) Has(value string) (bool, error) {
+	rows, err := s.host.db.Query("SELECT set FROM " + s.table + " WHERE set = " + value)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var scanValue string
+	// Get the value. Should not loop more than once.
+	counter := 0
+	for rows.Next() {
+		err = rows.Scan(&scanValue)
+		if err != nil {
+			panic(err.Error())
+		}
+		counter++
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
+	}
+	if counter > 1 {
+		panic("Duplicate members in set! " + value)
+	}
+	return counter > 0, nil
+}
+
+// Get all elements of the set
+func (s *Set) GetAll() ([]string, error) {
+	rows, err := s.host.db.Query("SELECT set FROM " + s.table + " ORDER BY id")
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var (
+		values []string
+		value  string
+	)
+	for rows.Next() {
+		err = rows.Scan(&value)
+		values = append(values, value)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
+	}
+	return values, nil
+}
+
+// Remove an element from the set
+func (s *Set) Del(value string) error {
+	// Remove a value from the table
+	_, err := s.host.db.Exec("DELETE FROM " + s.table + " WHERE set = " + value)
+	return err
+}
+
+// Remove this set
+func (s *Set) Remove() error {
+	// Remove the table
+	_, err := s.host.db.Exec("DROP TABLE " + s.table)
+	return err
+}
+
+// Clear the list contents
+func (s *Set) Clear() error {
+	// Clear the table
+	_, err := s.host.db.Exec("TRUNCATE TABLE " + s.table)
+	return err
+}
+
 ///* --- HashMap functions --- */
 //
 //// Create a new hashmap
