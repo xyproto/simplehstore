@@ -34,6 +34,7 @@ const (
 	defaultDatabaseServer = ""     // "username:password@server:port/"
 	defaultDatabaseName   = "test" // "main"
 	defaultStringLength   = 42     // using VARCHAR, so this will be expanded up to 65535 characters as needed, unless mysql strict mode is enabled
+	defaultPort           = 3306
 )
 
 /* --- Helper functions --- */
@@ -64,37 +65,115 @@ func twoFields(s, delim string) (string, string, bool) {
 
 /* --- Host functions --- */
 
+func leftOf(s, delim string) string {
+	if left, _, ok := twoFields(s, delim); ok {
+		return strings.TrimSpace(left)
+	}
+	return ""
+}
+
+func rightOf(s, delim string) string {
+	if _, right, ok := twoFields(s, delim); ok {
+		return strings.TrimSpace(right)
+	}
+	return ""
+}
+
 // Create a new database connection.
 // connectionString may be on the form "username:password@host:port/database".
 func NewHost(connectionString string) *Host {
-	// TODO: Find better variable names for these
-	dbname := defaultDatabaseName
-	hostColonPort := connectionString
-	// Extract the database name, if given
-	if first, second, ok := twoFields(hostColonPort, "/"); ok {
-		if strings.TrimSpace(second) != "" {
-			dbname = second
-		}
-		hostColonPort = first + "/"
-	} else if !strings.HasSuffix(hostColonPort, "/") {
-		// Add a trailing slash, if missing
-		hostColonPort += "/"
-	}
-	if strings.TrimSpace(hostColonPort) == "/" {
-		log.Println("Connecting to local database instance")
+	var (
+		userPass, hostPortDatabase, dbname, hostPort, password, username, port, hostname string
+	)
+
+	// Gather the fields
+
+	// Optional left side of @ with username and password
+	userPass = leftOf(connectionString, "@")
+	if userPass != "" {
+		hostPortDatabase = rightOf(connectionString, "@")
 	} else {
-		log.Println("Connecting to host: " + hostColonPort)
+		if strings.HasSuffix(connectionString, "@") {
+			hostPortDatabase = connectionString[:len(connectionString)-1]
+		} else {
+			hostPortDatabase = connectionString
+		}
 	}
-	db, err := sql.Open("mysql", hostColonPort)
+	// Optional right side of / with database name
+	dbname = rightOf(hostPortDatabase, "/")
+	if dbname != "" {
+		hostPort = leftOf(hostPortDatabase, "/")
+	} else {
+		if strings.HasSuffix(hostPortDatabase, "/") {
+			hostPort = hostPortDatabase[:len(hostPortDatabase)-1]
+		} else {
+			hostPort = hostPortDatabase
+		}
+		dbname = defaultDatabaseName
+	}
+	// Optional right side of : with password
+	password = rightOf(userPass, ":")
+	if password != "" {
+		username = leftOf(userPass, ":")
+	} else {
+		if strings.HasSuffix(userPass, ":") {
+			username = userPass[:len(userPass)-1]
+		} else {
+			username = userPass
+		}
+	}
+	// Optional right side of : with port
+	port = rightOf(hostPort, ":")
+	if port != "" {
+		hostname = leftOf(hostPort, ":")
+	} else {
+		if strings.HasSuffix(hostPort, ":") {
+			hostname = hostPort[:len(hostPort)-1]
+		} else {
+			hostname = hostPort
+		}
+		if hostname != "" {
+			port = strconv.Itoa(defaultPort)
+		}
+	}
+
+	//log.Println("username:\t\t", username)
+	//log.Println("password:\t\t", password)
+	//log.Println("host:\t", hostname)
+	//log.Println("port:\t", port)
+	//log.Println("dbname:\t\t", dbname)
+
+	// Build the new connection string
+
+	newConnectionString := ""
+	if (hostname != "") && (port != "") {
+		newConnectionString += "tcp(" + hostname + ":" + port + ")"
+	} else if hostname != "" {
+		newConnectionString += "tcp(" + hostname + ")"
+	} else if port != "" {
+		newConnectionString += "tcp(" + ":" + port + ")"
+		log.Fatalln("There is only a port. This should not happen.")
+	}
+	if (username != "") && (password != "") {
+		newConnectionString = username + ":" + password + "@" + newConnectionString
+	} else if username != "" {
+		newConnectionString = username + "@" + newConnectionString
+	} else if password != "" {
+		newConnectionString = ":" + password + "@" + newConnectionString
+	}
+	newConnectionString += "/"
+	log.Println("DSN:\t\t", newConnectionString)
+
+	db, err := sql.Open("mysql", newConnectionString)
 	if err != nil {
-		log.Fatalln("Could not connect to " + defaultDatabaseServer + "!")
+		log.Fatalln("Could not connect to " + newConnectionString + "!")
 	}
 	host := &Host{db, dbname}
 	if err := db.Ping(); err != nil {
 		log.Fatalln("Database does not reply to ping: " + err.Error())
 	}
 	if err := host.createDatabase(); err != nil {
-		panic("Could not create database " + host.dbname + ": " + err.Error())
+		log.Fatalln("Could not create database " + host.dbname + ": " + err.Error())
 	}
 	if err := host.useDatabase(); err != nil {
 		panic("Could not use database " + host.dbname + ": " + err.Error())
