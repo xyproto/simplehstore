@@ -38,13 +38,13 @@ const (
 	defaultPort           = 3306
 )
 
-// Test if the local database server is up and running
+// Test if the local database server is up and running.
 func TestConnection() (err error) {
 	return TestConnectionHost(defaultDatabaseServer)
 }
 
-// Test if a given database server at host:port is up and running.
-// Also pings.
+// Test if a given database server is up and running.
+// connectionString may be on the form "username:password@host:port/database".
 func TestConnectionHost(connectionString string) (err error) {
 	newConnectionString, _ := rebuildConnectionString(connectionString)
 	// Connect to the given host:port
