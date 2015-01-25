@@ -12,17 +12,14 @@ func main() {
 		log.Fatalln("Could not connect to database. Is the service up and running?")
 	}
 
-	// Use instead for testing if a different host/port is up.
-	// db.TestConnection("localhost:1234")
-
 	// Create a Host, connect to the given db server
 	host := db.New()
 
 	// Use this for connecting to a different db host/port
 	//host := db.NewHost("server:3306/db")
 
-	// For connecting to a different db host/port, with a password
-	// host := db.NewHost("password@server/db")
+	// For connecting to a different db host/port, with a username and password
+	// host := db.NewHost("username:password@server/db")
 
 	// Close the connection host right after this function returns
 	defer host.Close()
