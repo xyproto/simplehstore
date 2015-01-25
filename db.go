@@ -46,9 +46,9 @@ func TestConnection() (err error) {
 
 // Test if a given database server at host:port is up and running.
 // Also pings.
-func TestConnectionHost(hostColonPort string) (err error) {
+func TestConnectionHost(connectionString string) (err error) {
 	// Connect to the given host:port
-	db, err := sql.Open("mysql", hostColonPort)
+	db, err := sql.Open("mysql", connectionString)
 	defer db.Close()
 	return db.Ping()
 }
@@ -139,11 +139,12 @@ func NewHost(connectionString string) *Host {
 		}
 	}
 
-	//log.Println("username:\t\t", username)
-	//log.Println("password:\t\t", password)
-	//log.Println("host:\t", hostname)
-	//log.Println("port:\t", port)
-	//log.Println("dbname:\t\t", dbname)
+	log.Println("username:\t\t", username)
+	log.Println("password:\t\t", password)
+	log.Println("has password:\t", hasPassword)
+	log.Println("host:\t\t", hostname)
+	log.Println("port:\t\t", port)
+	log.Println("dbname:\t\t", dbname)
 
 	// Build the new connection string
 
