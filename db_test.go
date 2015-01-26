@@ -83,7 +83,8 @@ func TestList(t *testing.T) {
 		t.Errorf("Error, could not remove list! %s", err.Error())
 	}
 
-	var _ DbList = list
+	// Check that list qualifies for the IList interface
+	var _ IList = list
 }
 
 func TestSet(t *testing.T) {
@@ -131,8 +132,8 @@ func TestSet(t *testing.T) {
 		t.Errorf("Error, could not remove set! %s", err.Error())
 	}
 
-	// Check that hashmap qualifies for the DbKeyValue interface
-	var _ DbSet = set
+	// Check that set qualifies for the ISet interface
+	var _ ISet = set
 }
 
 func TestHashMap(t *testing.T) {
@@ -175,8 +176,8 @@ func TestHashMap(t *testing.T) {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
 	}
 
-	// Check that hashmap qualifies for the DbKeyValue interface
-	var _ DbHashMap = hashmap
+	// Check that hashmap qualifies for the IHashMap interface
+	var _ IHashMap = hashmap
 }
 
 func TestKeyValue(t *testing.T) {
@@ -207,8 +208,8 @@ func TestKeyValue(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error, could not remove keyvalue! %s", err.Error())
 	}
-	// Check that keyvalue qualifies for the DbKeyValue interface
-	var _ DbKeyValue = keyvalue
+	// Check that keyvalue qualifies for the IKeyValue interface
+	var _ IKeyValue = keyvalue
 }
 
 func TestTwoFields(t *testing.T) {

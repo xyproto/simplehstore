@@ -2,7 +2,7 @@ package db
 
 // Database interfaces
 
-type DbList interface {
+type IList interface {
 	Add(value string) error
 	GetAll() ([]string, error)
 	GetLast() (string, error)
@@ -11,7 +11,7 @@ type DbList interface {
 	Clear() error
 }
 
-type DbSet interface {
+type ISet interface {
 	Add(value string) error
 	Has(value string) (bool, error)
 	GetAll() ([]string, error)
@@ -20,7 +20,7 @@ type DbSet interface {
 	Clear() error
 }
 
-type DbHashMap interface {
+type IHashMap interface {
 	Set(owner, key, value string) error
 	Get(owner, key string) (string, error)
 	Has(owner, key string) (bool, error)
@@ -32,7 +32,7 @@ type DbHashMap interface {
 	Clear() error
 }
 
-type DbKeyValue interface {
+type IKeyValue interface {
 	Set(key, value string) error
 	Get(key string) (string, error)
 	Del(key string) error
