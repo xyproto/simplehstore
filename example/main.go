@@ -12,16 +12,16 @@ func main() {
 		log.Fatalln("Could not connect to database. Is the service up and running?")
 	}
 
-	// Create a Host, connect to the given db server
+	// Create a Host, connect to the local db server
 	host := db.New()
 
-	// Use this for connecting to a different db host/port
+	// Connecting to a different host/port
 	//host := db.NewHost("server:3306/db")
 
-	// For connecting to a different db host/port, with a username and password
+	// Connect to a different db host/port, with a username and password
 	// host := db.NewHost("username:password@server/db")
 
-	// Close the connection host right after this function returns
+	// Close the connection when the function returns
 	defer host.Close()
 
 	// Create a list named "greetings"

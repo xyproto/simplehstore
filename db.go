@@ -41,8 +41,8 @@ const (
 
 	listCol     = "listc"
 	setCol      = "setc"
-	hashKeyCol  = "hkey"
-	hashValCol  = "hval"
+	keyCol      = "hkey"
+	valCol      = "hval"
 	hashElemCol = "helem"
 	kvCol       = "kvc"
 )
@@ -357,9 +357,9 @@ func (s *Set) Clear() error {
 // Create a new hashmap
 func NewHashMap(host *Host, name string) *HashMap {
 	h := &HashMap{host, name}
-	// using "key" for the column with the primary key and "value" for the values
 	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
-	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s, %s %s)", name, hashElemCol, sqltype, hashKeyCol, sqltype, hashValCol, sqltype)
+	// Using three columns: element id, key and value
+	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s, %s %s)", name, hashElemCol, sqltype, keyCol, sqltype, valCol, sqltype)
 	if _, err := h.host.db.Exec(query); err != nil {
 		// This is more likely to happen at the start of the program,
 		// hence the panic.
@@ -372,15 +372,15 @@ func NewHashMap(host *Host, name string) *HashMap {
 }
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
-func (h *HashMap) Set(elementid, key, value string) error {
-	_, err := h.host.db.Exec("INSERT INTO "+h.table+" ("+hashElemCol+", "+hashKeyCol+", "+hashValCol+") VALUES (?, ?, ?)", elementid, key, value)
+func (h *HashMap) Set(owner, key, value string) error {
+	_, err := h.host.db.Exec("INSERT INTO "+h.table+" ("+hashElemCol+", "+keyCol+", "+valCol+") VALUES (?, ?, ?)", owner, key, value)
 	return err
 
 }
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password")
-func (h *HashMap) Get(elementid, key string) (string, error) {
-	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + elementid + "' AND " + hashKeyCol + " = '" + key + "'")
+func (h *HashMap) Get(owner, key string) (string, error) {
+	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -399,9 +399,9 @@ func (h *HashMap) Get(elementid, key string) (string, error) {
 	return value, nil
 }
 
-// Check if a given elementid + key is in the hash map
-func (h *HashMap) Has(elementid, key string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + elementid + "' AND " + hashKeyCol + " = '" + key + "'")
+// Check if a given owner + key is in the hash map
+func (h *HashMap) Has(owner, key string) (bool, error) {
+	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -425,9 +425,9 @@ func (h *HashMap) Has(elementid, key string) (bool, error) {
 	return counter > 0, nil
 }
 
-// Check if a given elementid exists as a hash map at all
-func (h *HashMap) Exists(elementid string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + elementid + "'")
+// Check if a given owner exists as a hash map at all
+func (h *HashMap) Exists(owner string) (bool, error) {
+	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -451,7 +451,7 @@ func (h *HashMap) Exists(elementid string) (bool, error) {
 	return counter > 0, nil
 }
 
-// Get all elementid's for all hash elements
+// Get all owner's for all hash elements
 func (h *HashMap) GetAll() ([]string, error) {
 	rows, err := h.host.db.Query("SELECT " + hashElemCol + " FROM " + h.table)
 	if err != nil {
@@ -476,16 +476,16 @@ func (h *HashMap) GetAll() ([]string, error) {
 }
 
 // Remove a key for an entry in a hashmap (for instance the email field for a user)
-func (h *HashMap) DelKey(elementid, key string) error {
+func (h *HashMap) DelKey(owner, key string) error {
 	// Remove a key from the hashmap
-	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + hashElemCol + " = '" + elementid + "' AND " + hashKeyCol + " = '" + key + "'")
+	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
 	return err
 }
 
 // Remove an element (for instance a user)
-func (h *HashMap) Del(elementid string) error {
+func (h *HashMap) Del(owner string) error {
 	// Remove an element id from the table
-	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + elementid + " = '" + elementid + "'")
+	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + owner + " = '" + owner + "'")
 	return err
 }
 
@@ -502,57 +502,69 @@ func (h *HashMap) Clear() error {
 	return err
 }
 
-///* --- KeyValue functions --- */
-//
-//// Create a new key/value
-//func NewKeyValue(host *sql.DB, table string) *KeyValue {
-//	return &KeyValue{host, table, defaultDatabaseName}
-//}
-//
-//// Select a different database
-//func (rkv *KeyValue) SelectDatabase(dbname string) {
-//	rkv.dbname = dbname
-//}
-//
-//// Set a key and value
-//func (rkv *KeyValue) Set(key, value string) error {
-//	db := rkv.host.Get(rkv.dbname)
-//	_, err := db.Do("SET", rkv.table+":"+key, value)
-//	return err
-//}
-//
-//// Get a value given a key
-//func (rkv *KeyValue) Get(key string) (string, error) {
-//	db := rkv.host.Get(rkv.dbname)
-//	result, err := db.String(db.Do("GET", rkv.table+":"+key))
-//	if err != nil {
-//		return "", err
-//	}
-//	return result, nil
-//}
-//
-//// Remove a key
-//func (rkv *KeyValue) Del(key string) error {
-//	db := rkv.host.Get(rkv.dbname)
-//	_, err := db.Do("DEL", rkv.table+":"+key)
-//	return err
-//}
-//
-//// Remove this key/value
-//func (rkv *KeyValue) Remove() error {
-//	db := rkv.host.Get(rkv.dbname)
-//	_, err := db.Do("DEL", rkv.table)
-//	return err
-//}
-//
-//// --- Generic db functions ---
-//
-//// Check if a key exists. The key can be a wildcard (ie. "user*").
-//func hasKey(host *sql.DB, wildcard string, dbname string) (bool, error) {
-//	db := host.Get(dbname)
-//	result, err := db.Values(db.Do("KEYS", wildcard))
-//	if err != nil {
-//		return false, err
-//	}
-//	return len(result) > 0, nil
-//}
+/* --- KeyValue functions --- */
+
+// Create a new key/value
+func NewKeyValue(host *Host, name string) *KeyValue {
+	kv := &KeyValue{host, name}
+	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
+	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s)", name, keyCol, sqltype, valCol, sqltype)
+	if _, err := kv.host.db.Exec(query); err != nil {
+		// This is more likely to happen at the start of the program,
+		// hence the panic.
+		panic("Could not create table " + name + ": " + err.Error())
+	}
+	if Verbose {
+		log.Println("Created table " + name + " in database " + host.dbname)
+	}
+	return kv
+
+}
+
+// Set a key and value
+func (kv *KeyValue) Set(key, value string) error {
+	_, err := kv.host.db.Exec("INSERT INTO "+kv.table+" ("+keyCol+", "+valCol+") VALUES (?, ?)", key, value)
+	return err
+
+}
+
+// Get a value given a key
+func (kv *KeyValue) Get(key string) (string, error) {
+	rows, err := kv.host.db.Query("SELECT " + valCol + " FROM " + kv.table + " WHERE " + keyCol + " = '" + key + "'")
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var value string
+	// Get the value. Should only loop once.
+	for rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
+	}
+	return value, nil
+}
+
+// Remove a key
+func (kv *KeyValue) Del(key string) error {
+	_, err := kv.host.db.Exec("DELETE FROM " + kv.table + " WHERE " + keyCol + " = '" + key + "'")
+	return err
+}
+
+// Remove this key/value
+func (kv *KeyValue) Remove() error {
+	// Remove the table
+	_, err := kv.host.db.Exec("DROP TABLE " + kv.table)
+	return err
+}
+
+// Clear this key/value
+func (kv *KeyValue) Clear() error {
+	// Remove the table
+	_, err := kv.host.db.Exec("TRUNCATE TABLE " + kv.table)
+	return err
+}

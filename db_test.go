@@ -5,12 +5,13 @@ import (
 )
 
 const (
-	listname    = "testlist"
-	setname     = "testset"
-	hashmapname = "testhashmap"
-	testdata1   = "abc123"
-	testdata2   = "def456"
-	testdata3   = "ghi789"
+	listname     = "testlist"
+	setname      = "testset"
+	hashmapname  = "testhashmap"
+	keyvaluename = "testkeyvalue"
+	testdata1    = "abc123"
+	testdata2    = "def456"
+	testdata3    = "ghi789"
 )
 
 func TestLocalConnection(t *testing.T) {
@@ -81,6 +82,8 @@ func TestList(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error, could not remove list! %s", err.Error())
 	}
+
+	var _ DbList = list
 }
 
 func TestSet(t *testing.T) {
@@ -127,6 +130,9 @@ func TestSet(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error, could not remove set! %s", err.Error())
 	}
+
+	// Check that hashmap qualifies for the DbKeyValue interface
+	var _ DbSet = set
 }
 
 func TestHashMap(t *testing.T) {
@@ -168,6 +174,41 @@ func TestHashMap(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
 	}
+
+	// Check that hashmap qualifies for the DbKeyValue interface
+	var _ DbHashMap = hashmap
+}
+
+func TestKeyValue(t *testing.T) {
+	Verbose = true
+
+	//host := New() // locally
+	host := NewHost("travis:@127.0.0.1/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
+
+	defer host.Close()
+	keyvalue := NewKeyValue(host, keyvaluename)
+	keyvalue.Clear()
+
+	key := "password"
+	value := "hunter1"
+
+	if err := keyvalue.Set(key, value); err != nil {
+		t.Errorf("Error, could not set value in keyvalue! %s", err.Error())
+	}
+	item, err := keyvalue.Get(key)
+	if err != nil {
+		t.Errorf("Error, could not fetch value from keyvalue! %s", err.Error())
+	}
+	if item != value {
+		t.Errorf("Error, expected %s, got %s!", value, item)
+	}
+	err = keyvalue.Remove()
+	if err != nil {
+		t.Errorf("Error, could not remove keyvalue! %s", err.Error())
+	}
+	// Check that keyvalue qualifies for the DbKeyValue interface
+	var _ DbKeyValue = keyvalue
 }
 
 func TestTwoFields(t *testing.T) {

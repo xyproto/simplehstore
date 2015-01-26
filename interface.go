@@ -21,13 +21,21 @@ type DbSet interface {
 }
 
 type DbHashMap interface {
-	Set(elementid, property, value string) error
-	Get(elementid, property string) (string, error)
-	Has(elementid, property string) (bool, error)
-	Exists(elementid string) (bool, error)
+	Set(owner, key, value string) error
+	Get(owner, key string) (string, error)
+	Has(owner, key string) (bool, error)
+	Exists(owner string) (bool, error)
 	GetAll() ([]string, error)
-	DelKey(elementid, property string) error
-	Del(elementid string) error
+	DelKey(owner, key string) error
+	Del(key string) error
+	Remove() error
+	Clear() error
+}
+
+type DbKeyValue interface {
+	Set(key, value string) error
+	Get(key string) (string, error)
+	Del(key string) error
 	Remove() error
 	Clear() error
 }
