@@ -39,12 +39,12 @@ const (
 	defaultStringLength   = 42     // using VARCHAR, so this will be expanded up to 65535 characters as needed, unless mysql strict mode is enabled
 	defaultPort           = 3306
 
-	listCol  = "listc"
-	setCol   = "setc"
-	keyCol   = "hkey"
-	valCol   = "hval"
-	ownerCol = "helem"
-	kvCol    = "kvc"
+	listCol  = "a_list"
+	setCol   = "a_set"
+	keyCol   = "property"
+	valCol   = "value"
+	ownerCol = "owner"
+	kvCol    = "a_kv"
 )
 
 // Test if the local database server is up and running.
