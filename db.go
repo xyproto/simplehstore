@@ -4,6 +4,7 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"strconv"
@@ -38,10 +39,12 @@ const (
 	defaultStringLength   = 42     // using VARCHAR, so this will be expanded up to 65535 characters as needed, unless mysql strict mode is enabled
 	defaultPort           = 3306
 
-	listColName = "list_col"
-	setColName  = "set_col"
-	hashColName = "hash_col"
-	kvColName   = "kv_col"
+	listCol     = "list_col"
+	setCol      = "set_col"
+	hashKeyCol  = "hkey"
+	hashValCol  = "hkey"
+	hashElemCol = "helem"
+	kvCol       = "kv_col"
 )
 
 // Test if the local database server is up and running.
@@ -146,7 +149,7 @@ func (host *Host) Close() {
 func NewList(host *Host, name string) *List {
 	l := &List{host, name}
 	// list is the name of the column
-	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id INT PRIMARY KEY AUTO_INCREMENT, " + listColName + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id INT PRIMARY KEY AUTO_INCREMENT, " + listCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		// This is more likely to happen at the start of the program,
 		// hence the panic.
 		panic("Could not create table " + name + ": " + err.Error())
@@ -160,13 +163,13 @@ func NewList(host *Host, name string) *List {
 // Add an element to the list
 func (rl *List) Add(value string) error {
 	// list is the name of the column
-	_, err := rl.host.db.Exec("INSERT INTO "+rl.table+" ("+listColName+") VALUES (?)", value)
+	_, err := rl.host.db.Exec("INSERT INTO "+rl.table+" ("+listCol+") VALUES (?)", value)
 	return err
 }
 
 // Get all elements of a list
 func (rl *List) GetAll() ([]string, error) {
-	rows, err := rl.host.db.Query("SELECT " + listColName + " FROM " + rl.table + " ORDER BY id")
+	rows, err := rl.host.db.Query("SELECT " + listCol + " FROM " + rl.table + " ORDER BY id")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -192,7 +195,7 @@ func (rl *List) GetAll() ([]string, error) {
 func (rl *List) GetLast() (string, error) {
 	// Fetches the item with the largest id.
 	// Faster than "ORDER BY id DESC limit 1" for large tables.
-	rows, err := rl.host.db.Query("SELECT " + listColName + " FROM " + rl.table + " WHERE id = (SELECT MAX(id) FROM " + rl.table + ")")
+	rows, err := rl.host.db.Query("SELECT " + listCol + " FROM " + rl.table + " WHERE id = (SELECT MAX(id) FROM " + rl.table + ")")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -213,7 +216,7 @@ func (rl *List) GetLast() (string, error) {
 
 // Get the last N elements of a list
 func (rl *List) GetLastN(n int) ([]string, error) {
-	rows, err := rl.host.db.Query("SELECT " + listColName + " FROM (SELECT * FROM " + rl.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
+	rows, err := rl.host.db.Query("SELECT " + listCol + " FROM (SELECT * FROM " + rl.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -258,7 +261,7 @@ func (rl *List) Clear() error {
 func NewSet(host *Host, name string) *Set {
 	s := &Set{host, name}
 	// list is the name of the column
-	if _, err := s.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (" + setColName + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := s.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (" + setCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		// This is more likely to happen at the start of the program, hence the panic.
 		panic("Could not create table " + name + ": " + err.Error())
 	}
@@ -273,15 +276,14 @@ func (s *Set) Add(value string) error {
 	// Check if the value is not already there before adding
 	has, err := s.Has(value)
 	if !has && (err == nil) {
-		// set is the name of the column
-		_, err = s.host.db.Exec("INSERT INTO "+s.table+" ("+setColName+") VALUES (?)", value)
+		_, err = s.host.db.Exec("INSERT INTO "+s.table+" ("+setCol+") VALUES (?)", value)
 	}
 	return err
 }
 
 // Check if a given value is in the set
 func (s *Set) Has(value string) (bool, error) {
-	rows, err := s.host.db.Query("SELECT " + setColName + " FROM " + s.table + " WHERE " + setColName + " = '" + value + "'")
+	rows, err := s.host.db.Query("SELECT " + setCol + " FROM " + s.table + " WHERE " + setCol + " = '" + value + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -307,7 +309,7 @@ func (s *Set) Has(value string) (bool, error) {
 
 // Get all elements of the set
 func (s *Set) GetAll() ([]string, error) {
-	rows, err := s.host.db.Query("SELECT " + setColName + " FROM " + s.table)
+	rows, err := s.host.db.Query("SELECT " + setCol + " FROM " + s.table)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -332,7 +334,7 @@ func (s *Set) GetAll() ([]string, error) {
 // Remove an element from the set
 func (s *Set) Del(value string) error {
 	// Remove a value from the table
-	_, err := s.host.db.Exec("DELETE FROM " + s.table + " WHERE " + setColName + " = " + value)
+	_, err := s.host.db.Exec("DELETE FROM " + s.table + " WHERE " + setCol + " = " + value)
 	return err
 }
 
@@ -350,84 +352,156 @@ func (s *Set) Clear() error {
 	return err
 }
 
-///* --- HashMap functions --- */
-//
-//// Create a new hashmap
-//func NewHashMap(host *sql.DB, table string) *HashMap {
-//	return &HashMap{host, table, defaultDatabaseName}
-//}
-//
-//// Select a different database
-//func (rh *HashMap) SelectDatabase(dbname string) {
-//	rh.dbname = dbname
-//}
-//
-//// Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
-//func (rh *HashMap) Set(elementid, key, value string) error {
-//	db := rh.host.Get(rh.dbname)
-//	_, err := db.Do("HSET", rh.table+":"+elementid, key, value)
-//	return err
-//}
-//
-//// Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password")
-//func (rh *HashMap) Get(elementid, key string) (string, error) {
-//	db := rh.host.Get(rh.dbname)
-//	result, err := db.String(db.Do("HGET", rh.table+":"+elementid, key))
-//	if err != nil {
-//		return "", err
-//	}
-//	return result, nil
-//}
-//
-//// Check if a given elementid + key is in the hash map
-//func (rh *HashMap) Has(elementid, key string) (bool, error) {
-//	db := rh.host.Get(rh.dbname)
-//	retval, err := db.Do("HEXISTS", rh.table+":"+elementid, key)
-//	if err != nil {
-//		panic(err)
-//	}
-//	return db.Bool(retval, err)
-//}
-//
-//// Check if a given elementid exists as a hash map at all
-//func (rh *HashMap) Exists(elementid string) (bool, error) {
-//	// TODO: key is not meant to be a wildcard, check for "*"
-//	return hasKey(rh.host, rh.table+":"+elementid, rh.dbname)
-//}
-//
-//// Get all elementid's for all hash elements
-//func (rh *HashMap) GetAll() ([]string, error) {
-//	db := rh.host.Get(rh.dbname)
-//	result, err := db.Values(db.Do("KEYS", rh.table+":*"))
-//	strs := make([]string, len(result))
-//	idlen := len(rh.table)
-//	for i := 0; i < len(result); i++ {
-//		strs[i] = getString(result, i)[idlen+1:]
-//	}
-//	return strs, err
-//}
-//
-//// Remove a key for an entry in a hashmap (for instance the email field for a user)
-//func (rh *HashMap) DelKey(elementid, key string) error {
-//	db := rh.host.Get(rh.dbname)
-//	_, err := db.Do("HDEL", rh.table+":"+elementid, key)
-//	return err
-//}
-//
-//// Remove an element (for instance a user)
-//func (rh *HashMap) Del(elementid string) error {
-//	db := rh.host.Get(rh.dbname)
-//	_, err := db.Do("DEL", rh.table+":"+elementid)
-//	return err
-//}
-//
-//// Remove this hashmap
-//func (rh *HashMap) Remove() error {
-//	db := rh.host.Get(rh.dbname)
-//	_, err := db.Do("DEL", rh.table)
-//	return err
-//}
-//
+/* --- HashMap functions --- */
+
+// Create a new hashmap
+func NewHashMap(host *Host, name string) *HashMap {
+	h := &HashMap{host, name}
+	// using "key" for the column with the primary key and "value" for the values
+	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
+	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s, %s %s)", name, hashElemCol, sqltype, hashKeyCol, sqltype, hashValCol, sqltype)
+	if _, err := h.host.db.Exec(query); err != nil {
+		// This is more likely to happen at the start of the program,
+		// hence the panic.
+		panic("Could not create table " + name + ": " + err.Error())
+	}
+	if Verbose {
+		log.Println("Created table " + name + " in database " + host.dbname)
+	}
+	return h
+}
+
+// Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
+func (h *HashMap) Set(elementid, key, value string) error {
+	_, err := h.host.db.Exec("INSERT INTO "+h.table+" ("+hashElemCol+", "+hashKeyCol+", "+hashValCol+") VALUES (?, ?, ?)", elementid, key, value)
+	return err
+
+}
+
+// Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password")
+func (h *HashMap) Get(elementid, key string) (string, error) {
+	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = " + elementid + " AND " + hashKeyCol + " = " + key)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var value string
+	// Get the value. Should only loop once.
+	for rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
+	}
+	return value, nil
+}
+
+// Check if a given elementid + key is in the hash map
+func (h *HashMap) Has(elementid, key string) (bool, error) {
+	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = " + elementid + " AND " + hashKeyCol + " = " + key)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var value string
+	// Get the value. Should only loop once.
+	counter := 0
+	for rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			panic(err.Error())
+		}
+		counter++
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
+	}
+	if counter > 1 {
+		panic("Duplicate keys in hash map! " + value)
+	}
+	return counter > 0, nil
+}
+
+// Check if a given elementid exists as a hash map at all
+func (h *HashMap) Exists(elementid string) (bool, error) {
+	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = " + elementid)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var value string
+	// Get the value. Should only loop once.
+	counter := 0
+	for rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			panic(err.Error())
+		}
+		counter++
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
+	}
+	if counter > 1 {
+		panic("Duplicate element ids in hash map! " + value)
+	}
+	return counter > 0, nil
+}
+
+// Get all elementid's for all hash elements
+func (h *HashMap) GetAll() ([]string, error) {
+	rows, err := h.host.db.Query("SELECT " + hashElemCol + " FROM " + h.table)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+	var (
+		values []string
+		value  string
+	)
+	for rows.Next() {
+		err = rows.Scan(&value)
+		values = append(values, value)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	if err := rows.Err(); err != nil {
+		panic(err.Error())
+	}
+	return values, nil
+}
+
+// Remove a key for an entry in a hashmap (for instance the email field for a user)
+func (h *HashMap) DelKey(elementid, key string) error {
+	// Remove a key from the hashmap
+	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + hashElemCol + " = " + elementid + " AND " + hashKeyCol + " = " + key)
+	return err
+}
+
+// Remove an element (for instance a user)
+func (h *HashMap) Del(elementid string) error {
+	// Remove an element id from the table
+	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + elementid + " = " + elementid)
+	return err
+}
+
+// Remove this hashmap
+func (h *HashMap) Remove() error {
+	// Remove the table
+	_, err := h.host.db.Exec("DROP TABLE " + h.table)
+	return err
+}
+
+func (h *HashMap) Clear() error {
+	// Clear the table
+	_, err := h.host.db.Exec("TRUNCATE TABLE " + h.table)
+	return err
+}
+
 ///* --- KeyValue functions --- */
 //
 //// Create a new key/value
