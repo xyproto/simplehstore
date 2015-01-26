@@ -92,5 +92,6 @@ type IUserState interface {
 
 // A database host
 type IHost interface {
+	Ping()
 	Close()
 }

@@ -83,8 +83,8 @@ func NewHost(connectionString string) *Host {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")
 	}
 	host := &Host{db, dbname}
-	if err := db.Ping(); err != nil {
-		log.Fatalln("Database does not reply to ping: " + err.Error())
+	if err := host.Ping(); err != nil {
+		log.Fatalln("Host does not reply to ping: " + err.Error())
 	}
 	if err := host.createDatabase(); err != nil {
 		log.Fatalln("Could not create database " + host.dbname + ": " + err.Error())
@@ -116,7 +116,7 @@ func (host *Host) SelectDatabase(dbname string) error {
 	return nil
 }
 
-// Will create the database if it does not already exist.
+// Will create the database if it does not already exist
 func (host *Host) createDatabase() error {
 	if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = utf8"); err != nil {
 		return err
@@ -127,7 +127,7 @@ func (host *Host) createDatabase() error {
 	return nil
 }
 
-// Use the host.dbname database.
+// Use the host.dbname database
 func (host *Host) useDatabase() error {
 	if _, err := host.db.Exec("USE " + host.dbname); err != nil {
 		return err
@@ -138,9 +138,14 @@ func (host *Host) useDatabase() error {
 	return nil
 }
 
-// Close the connection.
+// Close the connection
 func (host *Host) Close() {
 	host.db.Close()
+}
+
+// Ping the host
+func (host *Host) Ping() error {
+	return host.db.Ping()
 }
 
 /* --- List functions --- */
