@@ -37,6 +37,11 @@ const (
 	defaultDatabaseName   = "test" // "main"
 	defaultStringLength   = 42     // using VARCHAR, so this will be expanded up to 65535 characters as needed, unless mysql strict mode is enabled
 	defaultPort           = 3306
+
+	listColName = "list_col"
+	setColName  = "set_col"
+	hashColName = "hash_col"
+	kvColName   = "kv_col"
 )
 
 // Test if the local database server is up and running.
@@ -141,7 +146,7 @@ func (host *Host) Close() {
 func NewList(host *Host, name string) *List {
 	l := &List{host, name}
 	// list is the name of the column
-	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id INT PRIMARY KEY AUTO_INCREMENT, list VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id INT PRIMARY KEY AUTO_INCREMENT, " + listColName + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		// This is more likely to happen at the start of the program,
 		// hence the panic.
 		panic("Could not create table " + name + ": " + err.Error())
@@ -155,13 +160,13 @@ func NewList(host *Host, name string) *List {
 // Add an element to the list
 func (rl *List) Add(value string) error {
 	// list is the name of the column
-	_, err := rl.host.db.Exec("INSERT INTO "+rl.table+" (list) VALUES (?)", value)
+	_, err := rl.host.db.Exec("INSERT INTO "+rl.table+" ("+listColName+") VALUES (?)", value)
 	return err
 }
 
 // Get all elements of a list
 func (rl *List) GetAll() ([]string, error) {
-	rows, err := rl.host.db.Query("SELECT list FROM " + rl.table + " ORDER BY id")
+	rows, err := rl.host.db.Query("SELECT " + listColName + " FROM " + rl.table + " ORDER BY id")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -187,7 +192,7 @@ func (rl *List) GetAll() ([]string, error) {
 func (rl *List) GetLast() (string, error) {
 	// Fetches the item with the largest id.
 	// Faster than "ORDER BY id DESC limit 1" for large tables.
-	rows, err := rl.host.db.Query("SELECT list FROM " + rl.table + " WHERE id = (SELECT MAX(id) FROM " + rl.table + ")")
+	rows, err := rl.host.db.Query("SELECT " + listColName + " FROM " + rl.table + " WHERE id = (SELECT MAX(id) FROM " + rl.table + ")")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -208,7 +213,7 @@ func (rl *List) GetLast() (string, error) {
 
 // Get the last N elements of a list
 func (rl *List) GetLastN(n int) ([]string, error) {
-	rows, err := rl.host.db.Query("SELECT list FROM (SELECT * FROM " + rl.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
+	rows, err := rl.host.db.Query("SELECT " + listColName + " FROM (SELECT * FROM " + rl.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -253,7 +258,7 @@ func (rl *List) Clear() error {
 func NewSet(host *Host, name string) *Set {
 	s := &Set{host, name}
 	// list is the name of the column
-	if _, err := s.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (set VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := s.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (" + setColName + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		// This is more likely to happen at the start of the program, hence the panic.
 		panic("Could not create table " + name + ": " + err.Error())
 	}
@@ -267,16 +272,16 @@ func NewSet(host *Host, name string) *Set {
 func (s *Set) Add(value string) error {
 	// Check if the value is not already there before adding
 	has, err := s.Has(value)
-	if !has && (err != nil) {
+	if !has && (err == nil) {
 		// set is the name of the column
-		_, err = s.host.db.Exec("INSERT INTO "+s.table+" (set) VALUES (?)", value)
+		_, err = s.host.db.Exec("INSERT INTO "+s.table+" ("+setColName+") VALUES (?)", value)
 	}
 	return err
 }
 
 // Check if a given value is in the set
 func (s *Set) Has(value string) (bool, error) {
-	rows, err := s.host.db.Query("SELECT set FROM " + s.table + " WHERE set = " + value)
+	rows, err := s.host.db.Query("SELECT " + setColName + " FROM " + s.table + " WHERE " + setColName + " = '" + value + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -302,7 +307,7 @@ func (s *Set) Has(value string) (bool, error) {
 
 // Get all elements of the set
 func (s *Set) GetAll() ([]string, error) {
-	rows, err := s.host.db.Query("SELECT set FROM " + s.table + " ORDER BY id")
+	rows, err := s.host.db.Query("SELECT " + setColName + " FROM " + s.table)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -327,7 +332,7 @@ func (s *Set) GetAll() ([]string, error) {
 // Remove an element from the set
 func (s *Set) Del(value string) error {
 	// Remove a value from the table
-	_, err := s.host.db.Exec("DELETE FROM " + s.table + " WHERE set = " + value)
+	_, err := s.host.db.Exec("DELETE FROM " + s.table + " WHERE " + setColName + " = " + value)
 	return err
 }
 

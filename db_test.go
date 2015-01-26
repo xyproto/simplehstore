@@ -111,18 +111,16 @@ func TestSet(t *testing.T) {
 	if err := set.Add(testdata3); err != nil {
 		t.Errorf("Error, could not add item to set! %s", err.Error())
 	}
+	// Add an element twice. This is a set, so the element should only appear once.
+	if err := set.Add(testdata3); err != nil {
+		t.Errorf("Error, could not add item to set! %s", err.Error())
+	}
 	items, err = set.GetAll()
 	if err != nil {
 		t.Errorf("Error when retrieving set! %s", err.Error())
 	}
 	if len(items) != 3 {
 		t.Errorf("Error, wrong set length! %v", len(items))
-	}
-	if items[0] != testdata2 {
-		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata2, items[0])
-	}
-	if err = set.Del(testdata2); err != nil {
-		t.Errorf("Error, could not remove item " + testdata2)
 	}
 	err = set.Remove()
 	if err != nil {
