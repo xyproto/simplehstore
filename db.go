@@ -39,12 +39,12 @@ const (
 	defaultStringLength   = 42     // using VARCHAR, so this will be expanded up to 65535 characters as needed, unless mysql strict mode is enabled
 	defaultPort           = 3306
 
-	listCol     = "listc"
-	setCol      = "setc"
-	keyCol      = "hkey"
-	valCol      = "hval"
-	hashElemCol = "helem"
-	kvCol       = "kvc"
+	listCol  = "listc"
+	setCol   = "setc"
+	keyCol   = "hkey"
+	valCol   = "hval"
+	ownerCol = "helem"
+	kvCol    = "kvc"
 )
 
 // Test if the local database server is up and running.
@@ -364,7 +364,7 @@ func NewHashMap(host *Host, name string) *HashMap {
 	h := &HashMap{host, name}
 	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
 	// Using three columns: element id, key and value
-	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s, %s %s)", name, hashElemCol, sqltype, keyCol, sqltype, valCol, sqltype)
+	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s, %s %s)", name, ownerCol, sqltype, keyCol, sqltype, valCol, sqltype)
 	if _, err := h.host.db.Exec(query); err != nil {
 		// This is more likely to happen at the start of the program,
 		// hence the panic.
@@ -384,15 +384,15 @@ func (h *HashMap) Set(owner, key, value string) error {
 		return err
 	}
 	if Verbose {
-		log.Printf("h.Set: "+owner+"/"+key+" exists? %v\n", ok)
+		log.Printf("%s/%s exists? %v\n", owner, key, ok)
 	}
 	if ok {
-		_, err = h.host.db.Exec("UPDATE "+h.table+" SET "+valCol+" = ? WHERE "+hashElemCol+" = ? AND "+keyCol+" = ?", value, owner, key)
+		_, err = h.host.db.Exec("UPDATE "+h.table+" SET "+valCol+" = ? WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", value, owner, key)
 		if Verbose {
 			log.Println("Updated the table: " + h.table)
 		}
 	} else {
-		_, err = h.host.db.Exec("INSERT INTO "+h.table+" ("+hashElemCol+", "+keyCol+", "+valCol+") VALUES (?, ?, ?)", owner, key, value)
+		_, err = h.host.db.Exec("INSERT INTO "+h.table+" ("+ownerCol+", "+keyCol+", "+valCol+") VALUES (?, ?, ?)", owner, key, value)
 		if Verbose {
 			log.Println("Added to the table: " + h.table)
 		}
@@ -402,7 +402,7 @@ func (h *HashMap) Set(owner, key, value string) error {
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password").
 func (h *HashMap) Get(owner, key string) (string, error) {
-	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
+	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -428,7 +428,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 
 // Check if a given owner + key is in the hash map
 func (h *HashMap) Has(owner, key string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
+	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -454,7 +454,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 
 // Check if a given owner exists as a hash map at all
 func (h *HashMap) Exists(owner string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "'")
+	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -472,15 +472,12 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 	if err := rows.Err(); err != nil {
 		panic(err.Error())
 	}
-	if counter > 1 {
-		panic("Duplicate element ids in hash map! " + value)
-	}
 	return counter > 0, nil
 }
 
 // Get all owner's for all hash elements
 func (h *HashMap) GetAll() ([]string, error) {
-	rows, err := h.host.db.Query("SELECT " + hashElemCol + " FROM " + h.table)
+	rows, err := h.host.db.Query("SELECT " + ownerCol + " FROM " + h.table)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -505,7 +502,7 @@ func (h *HashMap) GetAll() ([]string, error) {
 // Remove a key for an entry in a hashmap (for instance the email field for a user)
 func (h *HashMap) DelKey(owner, key string) error {
 	// Remove a key from the hashmap
-	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
+	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
 	return err
 }
 
