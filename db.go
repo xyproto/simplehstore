@@ -288,7 +288,7 @@ func (s *Set) Add(value string) error {
 
 // Check if a given value is in the set
 func (s *Set) Has(value string) (bool, error) {
-	rows, err := s.host.db.Query("SELECT " + setCol + " FROM " + s.table + " WHERE " + setCol + " = '" + value + "'")
+	rows, err := s.host.db.Query("SELECT "+setCol+" FROM "+s.table+" WHERE "+setCol+" = ?", value)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -402,7 +402,7 @@ func (h *HashMap) Set(owner, key, value string) error {
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password").
 func (h *HashMap) Get(owner, key string) (string, error) {
-	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
+	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", owner, key)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -428,7 +428,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 
 // Check if a given owner + key is in the hash map
 func (h *HashMap) Has(owner, key string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
+	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", owner, key)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -454,7 +454,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 
 // Check if a given owner exists as a hash map at all
 func (h *HashMap) Exists(owner string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "'")
+	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ?", owner)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -502,14 +502,14 @@ func (h *HashMap) GetAll() ([]string, error) {
 // Remove a key for an entry in a hashmap (for instance the email field for a user)
 func (h *HashMap) DelKey(owner, key string) error {
 	// Remove a key from the hashmap
-	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
+	_, err := h.host.db.Exec("DELETE FROM "+h.table+" WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", owner, key)
 	return err
 }
 
 // Remove an element (for instance a user)
 func (h *HashMap) Del(owner string) error {
 	// Remove an element id from the table
-	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + owner + " = '" + owner + "'")
+	_, err := h.host.db.Exec("DELETE FROM "+h.table+" WHERE "+ownerCol+" = ?", owner)
 	return err
 }
 
@@ -560,7 +560,7 @@ func (kv *KeyValue) Set(key, value string) error {
 
 // Get a value given a key
 func (kv *KeyValue) Get(key string) (string, error) {
-	rows, err := kv.host.db.Query("SELECT " + valCol + " FROM " + kv.table + " WHERE " + keyCol + " = '" + key + "'")
+	rows, err := kv.host.db.Query("SELECT "+valCol+" FROM "+kv.table+" WHERE "+keyCol+" = ?", key)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -586,7 +586,7 @@ func (kv *KeyValue) Get(key string) (string, error) {
 
 // Remove a key
 func (kv *KeyValue) Del(key string) error {
-	_, err := kv.host.db.Exec("DELETE FROM " + kv.table + " WHERE " + keyCol + " = '" + key + "'")
+	_, err := kv.host.db.Exec("DELETE FROM "+kv.table+" WHERE "+keyCol+" = ?", key)
 	return err
 }
 
