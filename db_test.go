@@ -5,11 +5,12 @@ import (
 )
 
 const (
-	listname  = "testlist"
-	setname   = "testset"
-	testdata1 = "abc123"
-	testdata2 = "def456"
-	testdata3 = "ghi789"
+	listname    = "testlist"
+	setname     = "testset"
+	hashmapname = "testhashmap"
+	testdata1   = "abc123"
+	testdata2   = "def456"
+	testdata3   = "ghi789"
 )
 
 func TestLocalConnection(t *testing.T) {
@@ -125,6 +126,47 @@ func TestSet(t *testing.T) {
 	err = set.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove set! %s", err.Error())
+	}
+}
+
+func TestHashMap(t *testing.T) {
+	Verbose = true
+
+	//host := New() // locally
+	host := NewHost("travis:@127.0.0.1/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
+
+	defer host.Close()
+	hashmap := NewHashMap(host, hashmapname)
+	hashmap.Clear()
+
+	username := "bob"
+	key := "password"
+	value := "hunter1"
+
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+	items, err := hashmap.GetAll()
+	if err != nil {
+		t.Errorf("Error when retrieving elements! %s", err.Error())
+	}
+	if len(items) != 1 {
+		t.Errorf("Error, wrong element length! %v", len(items))
+	}
+	if (len(items) > 0) && (items[0] != username) {
+		t.Errorf("Error, wrong elementid! %v", items)
+	}
+	item, err := hashmap.Get(username, key)
+	if err != nil {
+		t.Errorf("Error, could not fetch value from hashmap! %s", err.Error())
+	}
+	if item != value {
+		t.Errorf("Error, expected %s, got %s!", value, item)
+	}
+	err = hashmap.Remove()
+	if err != nil {
+		t.Errorf("Error, could not remove hashmap! %s", err.Error())
 	}
 }
 

@@ -39,12 +39,12 @@ const (
 	defaultStringLength   = 42     // using VARCHAR, so this will be expanded up to 65535 characters as needed, unless mysql strict mode is enabled
 	defaultPort           = 3306
 
-	listCol     = "list_col"
-	setCol      = "set_col"
+	listCol     = "listc"
+	setCol      = "setc"
 	hashKeyCol  = "hkey"
-	hashValCol  = "hkey"
+	hashValCol  = "hval"
 	hashElemCol = "helem"
-	kvCol       = "kv_col"
+	kvCol       = "kvc"
 )
 
 // Test if the local database server is up and running.
@@ -380,7 +380,7 @@ func (h *HashMap) Set(elementid, key, value string) error {
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Get(elementid, key string) (string, error) {
-	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = " + elementid + " AND " + hashKeyCol + " = " + key)
+	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + elementid + "' AND " + hashKeyCol + " = '" + key + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -401,7 +401,7 @@ func (h *HashMap) Get(elementid, key string) (string, error) {
 
 // Check if a given elementid + key is in the hash map
 func (h *HashMap) Has(elementid, key string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = " + elementid + " AND " + hashKeyCol + " = " + key)
+	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + elementid + "' AND " + hashKeyCol + " = '" + key + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -427,7 +427,7 @@ func (h *HashMap) Has(elementid, key string) (bool, error) {
 
 // Check if a given elementid exists as a hash map at all
 func (h *HashMap) Exists(elementid string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = " + elementid)
+	rows, err := h.host.db.Query("SELECT " + hashValCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + elementid + "'")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -478,14 +478,14 @@ func (h *HashMap) GetAll() ([]string, error) {
 // Remove a key for an entry in a hashmap (for instance the email field for a user)
 func (h *HashMap) DelKey(elementid, key string) error {
 	// Remove a key from the hashmap
-	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + hashElemCol + " = " + elementid + " AND " + hashKeyCol + " = " + key)
+	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + hashElemCol + " = '" + elementid + "' AND " + hashKeyCol + " = '" + key + "'")
 	return err
 }
 
 // Remove an element (for instance a user)
 func (h *HashMap) Del(elementid string) error {
 	// Remove an element id from the table
-	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + elementid + " = " + elementid)
+	_, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + elementid + " = '" + elementid + "'")
 	return err
 }
 
