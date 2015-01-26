@@ -339,7 +339,7 @@ func (s *Set) GetAll() ([]string, error) {
 // Remove an element from the set
 func (s *Set) Del(value string) error {
 	// Remove a value from the table
-	_, err := s.host.db.Exec("DELETE FROM " + s.table + " WHERE " + setCol + " = " + value)
+	_, err := s.host.db.Exec("DELETE FROM "+s.table+" WHERE "+setCol+" = ?", value)
 	return err
 }
 
@@ -509,8 +509,18 @@ func (h *HashMap) DelKey(owner, key string) error {
 // Remove an element (for instance a user)
 func (h *HashMap) Del(owner string) error {
 	// Remove an element id from the table
-	_, err := h.host.db.Exec("DELETE FROM "+h.table+" WHERE "+ownerCol+" = ?", owner)
-	return err
+	results, err := h.host.db.Exec("DELETE FROM "+h.table+" WHERE "+ownerCol+" = ?", owner)
+	if err != nil {
+		return err
+	}
+	n, err := results.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if Verbose {
+		log.Println(n, "rows were deleted with Del("+owner+")!")
+	}
+	return nil
 }
 
 // Remove this hashmap
