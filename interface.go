@@ -65,7 +65,6 @@ type IUserState interface {
 	RemoveUser(username string)
 	SetAdminStatus(username string)
 	RemoveAdminStatus(username string)
-	addUserUnchecked(username, passwordHash, email string)
 	AddUser(username, password, email string)
 	SetLoggedIn(username string)
 	SetLoggedOut(username string)
