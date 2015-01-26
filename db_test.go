@@ -54,6 +54,7 @@ func TestList(t *testing.T) {
 	if err := list.Add(testdata3); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
+	return
 	items, err = list.GetAll()
 	if err != nil {
 		t.Errorf("Error when retrieving list! %s", err.Error())
@@ -151,6 +152,16 @@ func TestHashMap(t *testing.T) {
 	key := "password"
 	value := "hunter1"
 
+	// Get key that doesn't exist yet
+	item, err := hashmap.Get("ownerblabla", "keyblabla")
+	if err == nil {
+		t.Errorf("Key found, when it should be missing! %s", err.Error())
+	}
+
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+	// Once more, with the same data
 	if err := hashmap.Set(username, key, value); err != nil {
 		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
 	}
@@ -164,7 +175,7 @@ func TestHashMap(t *testing.T) {
 	if (len(items) > 0) && (items[0] != username) {
 		t.Errorf("Error, wrong elementid! %v", items)
 	}
-	item, err := hashmap.Get(username, key)
+	item, err = hashmap.Get(username, key)
 	if err != nil {
 		t.Errorf("Error, could not fetch value from hashmap! %s", err.Error())
 	}
@@ -194,6 +205,10 @@ func TestKeyValue(t *testing.T) {
 	key := "password"
 	value := "hunter1"
 
+	if err := keyvalue.Set(key, value); err != nil {
+		t.Errorf("Error, could not set value in keyvalue! %s", err.Error())
+	}
+	// Twice
 	if err := keyvalue.Set(key, value); err != nil {
 		t.Errorf("Error, could not set value in keyvalue! %s", err.Error())
 	}

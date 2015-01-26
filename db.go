@@ -378,12 +378,29 @@ func NewHashMap(host *Host, name string) *HashMap {
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
-	_, err := h.host.db.Exec("INSERT INTO "+h.table+" ("+hashElemCol+", "+keyCol+", "+valCol+") VALUES (?, ?, ?)", owner, key, value)
+	// See if the owner and key already exists
+	ok, err := h.Has(owner, key)
+	if err != nil {
+		return err
+	}
+	if Verbose {
+		log.Printf("h.Set: "+owner+"/"+key+" exists? %v\n", ok)
+	}
+	if ok {
+		_, err = h.host.db.Exec("UPDATE "+h.table+" SET "+valCol+" = ? WHERE "+hashElemCol+" = ? AND "+keyCol+" = ?", value, owner, key)
+		if Verbose {
+			log.Println("Updated the table: " + h.table)
+		}
+	} else {
+		_, err = h.host.db.Exec("INSERT INTO "+h.table+" ("+hashElemCol+", "+keyCol+", "+valCol+") VALUES (?, ?, ?)", owner, key, value)
+		if Verbose {
+			log.Println("Added to the table: " + h.table)
+		}
+	}
 	return err
-
 }
 
-// Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password")
+// Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password").
 func (h *HashMap) Get(owner, key string) (string, error) {
 	rows, err := h.host.db.Query("SELECT " + valCol + " FROM " + h.table + " WHERE " + hashElemCol + " = '" + owner + "' AND " + keyCol + " = '" + key + "'")
 	if err != nil {
@@ -392,14 +409,19 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	defer rows.Close()
 	var value string
 	// Get the value. Should only loop once.
+	counter := 0
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
 			panic(err.Error())
 		}
+		counter++
 	}
 	if err := rows.Err(); err != nil {
 		panic(err.Error())
+	}
+	if counter == 0 {
+		return "", errors.New("No such owner/key: " + owner + "/" + key)
 	}
 	return value, nil
 }
@@ -528,9 +550,15 @@ func NewKeyValue(host *Host, name string) *KeyValue {
 
 // Set a key and value
 func (kv *KeyValue) Set(key, value string) error {
-	_, err := kv.host.db.Exec("INSERT INTO "+kv.table+" ("+keyCol+", "+valCol+") VALUES (?, ?)", key, value)
-	return err
-
+	if _, err := kv.Get(key); err != nil {
+		// Key does not exist, create it
+		_, err = kv.host.db.Exec("INSERT INTO "+kv.table+" ("+keyCol+", "+valCol+") VALUES (?, ?)", key, value)
+		return err
+	} else {
+		// Key exists, update the value
+		_, err := kv.host.db.Exec("UPDATE "+kv.table+" SET "+valCol+" = ? WHERE "+keyCol+" = ?", value, key)
+		return err
+	}
 }
 
 // Get a value given a key
@@ -542,14 +570,19 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	defer rows.Close()
 	var value string
 	// Get the value. Should only loop once.
+	counter := 0
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
 			panic(err.Error())
 		}
+		counter++
 	}
 	if err := rows.Err(); err != nil {
 		panic(err.Error())
+	}
+	if counter != 1 {
+		return "", errors.New("Wrong number of keys in KeyValue table: " + kv.table)
 	}
 	return value, nil
 }
