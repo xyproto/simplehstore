@@ -86,8 +86,8 @@ type IUserState interface {
 	GenerateUniqueConfirmationCode() (string, error)
 
 	// Related to the database backend
-	Users() *IHashMap
-	Host() *IHost
+	Users() IHashMap
+	Host() IHost
 }
 
 // A database host
