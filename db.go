@@ -168,6 +168,7 @@ func NewList(host *Host, name string) *List {
 
 // Add an element to the list
 func (rl *List) Add(value string) error {
+	value = Encode(value)
 	// list is the name of the column
 	_, err := rl.host.db.Exec("INSERT INTO "+rl.table+" ("+listCol+") VALUES (?)", value)
 	return err
@@ -186,7 +187,7 @@ func (rl *List) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		values = append(values, value)
+		values = append(values, Decode(value))
 		if err != nil {
 			panic(err.Error())
 		}
@@ -217,7 +218,7 @@ func (rl *List) GetLast() (string, error) {
 	if err := rows.Err(); err != nil {
 		panic(err.Error())
 	}
-	return value, nil
+	return Decode(value), nil
 }
 
 // Get the last N elements of a list
@@ -233,7 +234,7 @@ func (rl *List) GetLastN(n int) ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		values = append(values, value)
+		values = append(values, Decode(value))
 		if err != nil {
 			panic(err.Error())
 		}
@@ -279,6 +280,7 @@ func NewSet(host *Host, name string) *Set {
 
 // Add an element to the set
 func (s *Set) Add(value string) error {
+	value = Encode(value)
 	// Check if the value is not already there before adding
 	has, err := s.Has(value)
 	if !has && (err == nil) {
@@ -289,6 +291,7 @@ func (s *Set) Add(value string) error {
 
 // Check if a given value is in the set
 func (s *Set) Has(value string) (bool, error) {
+	value = Encode(value)
 	rows, err := s.host.db.Query("SELECT "+setCol+" FROM "+s.table+" WHERE "+setCol+" = ?", value)
 	if err != nil {
 		panic(err.Error())
@@ -326,7 +329,7 @@ func (s *Set) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		values = append(values, value)
+		values = append(values, Decode(value))
 		if err != nil {
 			panic(err.Error())
 		}
@@ -339,6 +342,7 @@ func (s *Set) GetAll() ([]string, error) {
 
 // Remove an element from the set
 func (s *Set) Del(value string) error {
+	value = Encode(value)
 	// Remove a value from the table
 	_, err := s.host.db.Exec("DELETE FROM "+s.table+" WHERE "+setCol+" = ?", value)
 	return err
@@ -379,6 +383,7 @@ func NewHashMap(host *Host, name string) *HashMap {
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
+	value = Encode(value)
 	// See if the owner and key already exists
 	ok, err := h.Has(owner, key)
 	if err != nil {
@@ -424,7 +429,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	if counter == 0 {
 		return "", errors.New("No such owner/key: " + owner + "/" + key)
 	}
-	return value, nil
+	return Decode(value), nil
 }
 
 // Check if a given owner + key is in the hash map
@@ -489,7 +494,7 @@ func (h *HashMap) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		values = append(values, value)
+		values = append(values, Decode(value))
 		if err != nil {
 			panic(err.Error())
 		}
@@ -558,6 +563,7 @@ func NewKeyValue(host *Host, name string) *KeyValue {
 
 // Set a key and value
 func (kv *KeyValue) Set(key, value string) error {
+	value = Encode(value)
 	if _, err := kv.Get(key); err != nil {
 		// Key does not exist, create it
 		_, err = kv.host.db.Exec("INSERT INTO "+kv.table+" ("+keyCol+", "+valCol+") VALUES (?, ?)", key, value)
@@ -592,7 +598,7 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	if counter != 1 {
 		return "", errors.New("Wrong number of keys in KeyValue table: " + kv.table)
 	}
-	return value, nil
+	return Decode(value), nil
 }
 
 // Remove a key
