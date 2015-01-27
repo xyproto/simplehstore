@@ -2,6 +2,9 @@ package db
 
 import (
 	"testing"
+
+	// For testing the storage of password hashes
+	"code.google.com/p/go.crypto/bcrypt"
 )
 
 const (
@@ -225,6 +228,40 @@ func TestKeyValue(t *testing.T) {
 	}
 	// Check that keyvalue qualifies for the IKeyValue interface
 	var _ IKeyValue = keyvalue
+}
+
+func TestHashStorage(t *testing.T) {
+	Verbose = true
+
+	//host := New() // locally
+	host := NewHost("travis:@127.0.0.1/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
+
+	defer host.Close()
+	hashmap := NewHashMap(host, hashmapname)
+	hashmap.Clear()
+
+	username := "bob"
+	key := "password"
+	password := "hunter1"
+	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	value := string(passwordHash)
+
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+	item, err := hashmap.Get(username, key)
+	if err != nil {
+		t.Errorf("Unable to retrieve from hashmap! %s\n", err.Error())
+	}
+
+	if item != value {
+		t.Errorf("Error, got a different value back! %s != %s\n", value, item)
+	}
+	err = hashmap.Remove()
+	if err != nil {
+		t.Errorf("Error, could not remove hashmap! %s", err.Error())
+	}
 }
 
 func TestTwoFields(t *testing.T) {

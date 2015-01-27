@@ -36,9 +36,10 @@ const (
 	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = ""     // "username:password@server:port/"
 	defaultDatabaseName   = "test" // "main"
-	defaultStringLength   = 42     // using VARCHAR, so this will be expanded up to 65535 characters as needed, unless mysql strict mode is enabled
+	defaultStringLength   = 65535  // using VARCHAR
 	defaultPort           = 3306
 
+	// Column names
 	listCol  = "a_list"
 	setCol   = "a_set"
 	keyCol   = "property"
@@ -280,9 +281,6 @@ func NewSet(host *Host, name string) *Set {
 func (s *Set) Add(value string) error {
 	// Check if the value is not already there before adding
 	has, err := s.Has(value)
-	if Verbose {
-		log.Printf("When adding to set \"%s\"/\"%s\", value is already there: %s\n", s.table, setCol, value)
-	}
 	if !has && (err == nil) {
 		_, err = s.host.db.Exec("INSERT INTO "+s.table+" ("+setCol+") VALUES (?)", value)
 	}
