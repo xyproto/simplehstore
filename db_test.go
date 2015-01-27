@@ -3,8 +3,11 @@ package db
 import (
 	"testing"
 
-	// For testing the storage of password hashes
+	// For testing the storage of bcrypt password hashes
 	"code.google.com/p/go.crypto/bcrypt"
+	"github.com/xyproto/permissions2"
+	"crypto/sha256"
+	"io"
 )
 
 const (
@@ -244,6 +247,9 @@ func TestHashStorage(t *testing.T) {
 	username := "bob"
 	key := "password"
 	password := "hunter1"
+
+	// bcrypt test
+
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	value := string(passwordHash)
 
@@ -254,10 +260,28 @@ func TestHashStorage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to retrieve from hashmap! %s\n", err.Error())
 	}
-
 	if item != value {
-		t.Errorf("Error, got a different value back! %s != %s\n", value, item)
+		t.Errorf("Error, got a different value back (bcrypt)! %s != %s\n", value, item)
 	}
+
+	// sha256 test
+
+	hasher := sha256.New()
+	io.WriteString(hasher, password + permissions.RandomCookieFriendlyString(30) + username)
+	passwordHash = hasher.Sum(nil)
+	value = string(passwordHash)
+
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+	item, err = hashmap.Get(username, key)
+	if err != nil {
+		t.Errorf("Unable to retrieve from hashmap! %s\n", err.Error())
+	}
+	if item != value {
+		t.Errorf("Error, got a different value back (sha256)! %s != %s\n", value, item)
+	}
+
 	err = hashmap.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
