@@ -39,6 +39,9 @@ const (
 	defaultStringLength   = 65535  // using VARCHAR
 	defaultPort           = 3306
 
+	// Requires MySQL >= 5.53 and MariaDB >= ? for utf8mb4
+	charset = "utf8mb4" // "utf8"
+
 	// Column names
 	listCol  = "a_list"
 	setCol   = "a_set"
@@ -119,7 +122,7 @@ func (host *Host) SelectDatabase(dbname string) error {
 
 // Will create the database if it does not already exist
 func (host *Host) createDatabase() error {
-	if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = utf8"); err != nil {
+	if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = " + charset); err != nil {
 		return err
 	}
 	if Verbose {
@@ -280,11 +283,11 @@ func NewSet(host *Host, name string) *Set {
 
 // Add an element to the set
 func (s *Set) Add(value string) error {
-	value = Encode(value)
+	encodedValue := Encode(value)
 	// Check if the value is not already there before adding
 	has, err := s.Has(value)
 	if !has && (err == nil) {
-		_, err = s.host.db.Exec("INSERT INTO "+s.table+" ("+setCol+") VALUES (?)", value)
+		_, err = s.host.db.Exec("INSERT INTO "+s.table+" ("+setCol+") VALUES (?)", encodedValue)
 	}
 	return err
 }
@@ -494,7 +497,7 @@ func (h *HashMap) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		values = append(values, Decode(value))
+		values = append(values, value)
 		if err != nil {
 			panic(err.Error())
 		}

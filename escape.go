@@ -23,7 +23,7 @@ func Encode(sql string) string {
 func Decode(code string) string {
 	unhexedBytes, err := hex.DecodeString(code)
 	if err != nil {
-		panic(err.Error())
+		panic(code + "    " + err.Error())
 	}
 	buf := bytes.NewBuffer(unhexedBytes)
 	decompressorReader := flate.NewReader(buf)

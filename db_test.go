@@ -132,7 +132,7 @@ func TestSet(t *testing.T) {
 		t.Errorf("Error when retrieving set! %s", err.Error())
 	}
 	if len(items) != 3 {
-		t.Errorf("Error, wrong set length! %v", len(items))
+		t.Errorf("Error, wrong set length! %v\n%v\n", len(items), items)
 	}
 	err = set.Remove()
 	if err != nil {
