@@ -170,16 +170,16 @@ func NewList(host *Host, name string) *List {
 }
 
 // Add an element to the list
-func (rl *List) Add(value string) error {
+func (l *List) Add(value string) error {
 	value = Encode(value)
 	// list is the name of the column
-	_, err := rl.host.db.Exec("INSERT INTO "+rl.table+" ("+listCol+") VALUES (?)", value)
+	_, err := l.host.db.Exec("INSERT INTO "+l.table+" ("+listCol+") VALUES (?)", value)
 	return err
 }
 
 // Get all elements of a list
-func (rl *List) GetAll() ([]string, error) {
-	rows, err := rl.host.db.Query("SELECT " + listCol + " FROM " + rl.table + " ORDER BY id")
+func (l *List) GetAll() ([]string, error) {
+	rows, err := l.host.db.Query("SELECT " + listCol + " FROM " + l.table + " ORDER BY id")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -225,8 +225,8 @@ func (rl *List) GetLast() (string, error) {
 }
 
 // Get the last N elements of a list
-func (rl *List) GetLastN(n int) ([]string, error) {
-	rows, err := rl.host.db.Query("SELECT " + listCol + " FROM (SELECT * FROM " + rl.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
+func (l *List) GetLastN(n int) ([]string, error) {
+	rows, err := l.host.db.Query("SELECT " + listCol + " FROM (SELECT * FROM " + l.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -252,16 +252,16 @@ func (rl *List) GetLastN(n int) ([]string, error) {
 }
 
 // Remove this list
-func (rl *List) Remove() error {
+func (l *List) Remove() error {
 	// Remove the table
-	_, err := rl.host.db.Exec("DROP TABLE " + rl.table)
+	_, err := l.host.db.Exec("DROP TABLE " + l.table)
 	return err
 }
 
 // Clear the list contents
-func (rl *List) Clear() error {
+func (l *List) Clear() error {
 	// Clear the table
-	_, err := rl.host.db.Exec("TRUNCATE TABLE " + rl.table)
+	_, err := l.host.db.Exec("TRUNCATE TABLE " + l.table)
 	return err
 }
 

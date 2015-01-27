@@ -60,7 +60,6 @@ func TestList(t *testing.T) {
 	if err := list.Add(testdata3); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
-	return
 	items, err = list.GetAll()
 	if err != nil {
 		t.Errorf("Error when retrieving list! %s", err.Error())
