@@ -280,6 +280,9 @@ func NewSet(host *Host, name string) *Set {
 func (s *Set) Add(value string) error {
 	// Check if the value is not already there before adding
 	has, err := s.Has(value)
+	if Verbose {
+		log.Printf("When adding to set \"%s\"/\"%s\", value is already there: %s\n", s.table, setCol, value)
+	}
 	if !has && (err == nil) {
 		_, err = s.host.db.Exec("INSERT INTO "+s.table+" ("+setCol+") VALUES (?)", value)
 	}
