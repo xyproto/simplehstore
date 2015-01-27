@@ -5,10 +5,22 @@ import (
 )
 
 func TestEncodeDecode(t *testing.T) {
-	if Decode(Encode("hello")) != "hello" {
-		t.Error("Unable to encode and decode.")
+	hello := "hello"
+	if Decode(Encode(hello)) != hello {
+		t.Error("Unable to encode and decode: " + hello)
 	}
-	if Decode(Encode("\n!''' DROP TABLES EVERYWHERE")) != "\n!''' DROP TABLES EVERYWHERE" {
-		t.Error("Unable to encode and decode.")
+}
+
+func TestEncodeDecodeWithNewline(t *testing.T) {
+	newlinedrop := "\n!''' DROP TABLES EVERYWHERE"
+	if Decode(Encode(newlinedrop)) != newlinedrop {
+		t.Error("Unable to encode and decode: " + newlinedrop)
+	}
+}
+
+func TestEncodeDecodeWithEOB(t *testing.T) {
+	weirdness := "\xbd\xb2\x3d\x17\xbc\x20\xe2\x8c\x98"
+	if Decode(Encode(weirdness)) != weirdness {
+		t.Error("Unable to encode and decode: " + weirdness)
 	}
 }

@@ -5,25 +5,34 @@ import (
 	"compress/flate"
 	"encoding/hex"
 	"io/ioutil"
+	//"strings"
 )
 
-// Escape strings that are sent to MariaDB/MySQL by compressing and hex encoding
-func Encode(sql string) string {
+// MariaDB/MySQL does not handle some characters well.
+// Compressing and hex encoding the value should avoid this.
+func Encode(value string) string {
+	if value == "" {
+		return ""
+	}
 	var buf bytes.Buffer
+	//value = strings.Replace(value, "\023", "-=-=-", -1)
 	compressorWriter, err := flate.NewWriter(&buf, 1) // compression level 1 (fastest)
 	if err != nil {
 		panic(err.Error())
 	}
-	compressorWriter.Write([]byte(sql))
+	compressorWriter.Write([]byte(value))
 	compressorWriter.Close()
 	return hex.EncodeToString(buf.Bytes())
 }
 
 // Dehex and decompress the given string
 func Decode(code string) string {
+	if code == "" {
+		return ""
+	}
 	unhexedBytes, err := hex.DecodeString(code)
 	if err != nil {
-		panic(code + "    " + err.Error())
+		panic("Could not hexdecode " + code + ": " + err.Error())
 	}
 	buf := bytes.NewBuffer(unhexedBytes)
 	decompressorReader := flate.NewReader(buf)
@@ -32,5 +41,7 @@ func Decode(code string) string {
 	if err != nil {
 		panic(err.Error())
 	}
-	return string(decompressedBytes)
+	value := string(decompressedBytes)
+	//return strings.Replace(value, "-=-=-", "\023", -1)
+	return value
 }
