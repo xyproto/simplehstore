@@ -5,7 +5,7 @@ db
 [![GoDoc](https://godoc.org/github.com/xyproto/db?status.svg)](http://godoc.org/github.com/xyproto/db)
 
 
-Easy way to use a MariaDB/MySQL database from Go. Modeled after [simpleredis](https://github.com/xyproto/simpleredis).
+Easy way to use a MariaDB/MySQL database from Go.
 
 
 Online API Documentation
@@ -20,6 +20,7 @@ Features and limitations
 * Supports simple use of lists, hashmaps, sets and key/values.
 * Deals mainly with strings.
 * Uses the [mysql](https://github.com/go-sql-driver/mysql) package.
+* Modeled after [simpleredis](https://github.com/xyproto/simpleredis).
 
 
 Sample usage
@@ -37,7 +38,7 @@ import (
 func main() {
 	// Check if the db service is up
 	if err := db.TestConnection(); err != nil {
-		log.Fatalln("Could not connect to database. Is the service up and running?")
+		log.Fatalln("Could not connect to local database. Is the service up and running?")
 	}
 
 	// Create a Host, connect to the local db server
@@ -47,7 +48,7 @@ func main() {
 	//host := db.NewHost("server:3306/db")
 
 	// Connect to a different db host/port, with a username and password
-	// host := db.NewHost("username:password@server/db")
+	// host := db.NewHost("username:password@server:port/db")
 
 	// Close the connection when the function returns
 	defer host.Close()

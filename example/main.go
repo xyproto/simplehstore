@@ -9,7 +9,7 @@ import (
 func main() {
 	// Check if the db service is up
 	if err := db.TestConnection(); err != nil {
-		log.Fatalln("Could not connect to database. Is the service up and running?")
+		log.Fatalln("Could not connect to local database. Is the service up and running?")
 	}
 
 	// Create a Host, connect to the local db server

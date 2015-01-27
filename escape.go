@@ -10,7 +10,8 @@ import (
 )
 
 // MariaDB/MySQL does not handle some characters well.
-// Compressing and hex encoding the value should avoid this.
+// Compressing and hex encoding the value is one of many possible ways
+// to avoid this. Using BLOB fields and different datatypes is another.
 func Encode(value string) string {
 	// Don't encode empty strings
 	if value == "" {
