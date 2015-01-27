@@ -1,4 +1,4 @@
-// Simple way to use a MySQL/MariaDB database
+// Simple way to use a MySQL/MariaDB database.
 package db
 
 import (
