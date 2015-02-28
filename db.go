@@ -99,6 +99,26 @@ func NewHost(connectionString string) *Host {
 	return host
 }
 
+// Create a new database connection with a valid DSN.
+func NewHostWithDSN(connectionString string, dbname string) *Host {
+
+	db, err := sql.Open("mysql", connectionString)
+	if err != nil {
+		log.Fatalln("Could not connect to " + newConnectionString + "!")
+	}
+	host := &Host{db, dbname}
+	if err := host.Ping(); err != nil {
+		log.Fatalln("Host does not reply to ping: " + err.Error())
+	}
+	if err := host.createDatabase(); err != nil {
+		log.Fatalln("Could not create database " + host.dbname + ": " + err.Error())
+	}
+	if err := host.useDatabase(); err != nil {
+		panic("Could not use database " + host.dbname + ": " + err.Error())
+	}
+	return host
+}
+
 // The default database connection
 func New() *Host {
 	connectionString := defaultDatabaseServer + defaultDatabaseName
