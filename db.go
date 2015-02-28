@@ -120,7 +120,7 @@ func NewHostWithDSN(connectionString string, dbname string) *Host {
 
 	db, err := sql.Open("mysql", connectionString)
 	if err != nil {
-		log.Fatalln("Could not connect to " + newConnectionString + "!")
+		log.Fatalln("Could not connect to " + connectionString + "!")
 	}
 	host := &Host{db, dbname}
 	if err := host.Ping(); err != nil {
