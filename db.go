@@ -74,6 +74,22 @@ func TestConnectionHost(connectionString string) (err error) {
 	return err
 }
 
+// Test if a given database server is up and running.
+func TestConnectionHostWithDSN(connectionString string) (err error) {
+	// Connect to the given host:port
+	db, err := sql.Open("mysql", connectionString)
+	defer db.Close()
+	err = db.Ping()
+	if Verbose {
+		if err != nil {
+			log.Println("Ping: failed")
+		} else {
+			log.Println("Ping: ok")
+		}
+	}
+	return err
+}
+
 /* --- Host functions --- */
 
 // Create a new database connection.
