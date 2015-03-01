@@ -21,6 +21,8 @@ Features and limitations
 * Deals mainly with strings.
 * Uses the [mysql](https://github.com/go-sql-driver/mysql) package.
 * Modeled after [simpleredis](https://github.com/xyproto/simpleredis).
+* The hash maps are not really hash maps, but the names are kept, in order to keep compatability with [simpleredis](https://github.com/xyproto/simpleredis). They can be used in a similar fashion, but expect performance to suffer if scaling up the amount of data. If performance when scaling up is a concern, [redis](https://redis.io) is likely to be a better choice in any case.
+* MariaDB/MySQL normally has issues with variable size UTF-8 strings, for some combinations of characters. This package avoids these problems by gzipping and hex encoding the data before storing in the database. This may slow down or speed up the time it takes to access the data, depending on your setup, but it's a safe way to encode *any* string.
 
 
 Sample usage
