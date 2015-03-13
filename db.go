@@ -74,6 +74,22 @@ func TestConnectionHost(connectionString string) (err error) {
 	return err
 }
 
+// Test if a given database server is up and running.
+func TestConnectionHostWithDSN(connectionString string) (err error) {
+	// Connect to the given host:port
+	db, err := sql.Open("mysql", connectionString)
+	defer db.Close()
+	err = db.Ping()
+	if Verbose {
+		if err != nil {
+			log.Println("Ping: failed")
+		} else {
+			log.Println("Ping: ok")
+		}
+	}
+	return err
+}
+
 /* --- Host functions --- */
 
 // Create a new database connection.
@@ -85,6 +101,26 @@ func NewHost(connectionString string) *Host {
 	db, err := sql.Open("mysql", newConnectionString)
 	if err != nil {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")
+	}
+	host := &Host{db, dbname}
+	if err := host.Ping(); err != nil {
+		log.Fatalln("Host does not reply to ping: " + err.Error())
+	}
+	if err := host.createDatabase(); err != nil {
+		log.Fatalln("Could not create database " + host.dbname + ": " + err.Error())
+	}
+	if err := host.useDatabase(); err != nil {
+		panic("Could not use database " + host.dbname + ": " + err.Error())
+	}
+	return host
+}
+
+// Create a new database connection with a valid DSN.
+func NewHostWithDSN(connectionString string, dbname string) *Host {
+
+	db, err := sql.Open("mysql", connectionString)
+	if err != nil {
+		log.Fatalln("Could not connect to " + connectionString + "!")
 	}
 	host := &Host{db, dbname}
 	if err := host.Ping(); err != nil {
