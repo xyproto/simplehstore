@@ -195,8 +195,7 @@ func NewList(host *Host, name string) *List {
 	l := &List{host, name}
 	// list is the name of the column
 	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id INT PRIMARY KEY AUTO_INCREMENT, " + listCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
-		// This is more likely to happen at the start of the program,
-		// hence the panic.
+		// This is more likely to happen at the start of the program, hence the panic.
 		panic("Could not create table " + name + ": " + err.Error())
 	}
 	if Verbose {
@@ -217,7 +216,7 @@ func (l *List) Add(value string) error {
 func (l *List) GetAll() ([]string, error) {
 	rows, err := l.host.db.Query("SELECT " + listCol + " FROM " + l.table + " ORDER BY id")
 	if err != nil {
-		panic(err.Error())
+		return []string{}, err
 	}
 	defer rows.Close()
 	var (
@@ -228,10 +227,12 @@ func (l *List) GetAll() ([]string, error) {
 		err = rows.Scan(&value)
 		values = append(values, Decode(value))
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	return values, nil
@@ -243,7 +244,7 @@ func (rl *List) GetLast() (string, error) {
 	// Faster than "ORDER BY id DESC limit 1" for large tables.
 	rows, err := rl.host.db.Query("SELECT " + listCol + " FROM " + rl.table + " WHERE id = (SELECT MAX(id) FROM " + rl.table + ")")
 	if err != nil {
-		panic(err.Error())
+		return "", err
 	}
 	defer rows.Close()
 	var value string
@@ -251,10 +252,12 @@ func (rl *List) GetLast() (string, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	return Decode(value), nil
@@ -264,7 +267,7 @@ func (rl *List) GetLast() (string, error) {
 func (l *List) GetLastN(n int) ([]string, error) {
 	rows, err := l.host.db.Query("SELECT " + listCol + " FROM (SELECT * FROM " + l.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
 	if err != nil {
-		panic(err.Error())
+		return []string{}, err
 	}
 	defer rows.Close()
 	var (
@@ -275,10 +278,12 @@ func (l *List) GetLastN(n int) ([]string, error) {
 		err = rows.Scan(&value)
 		values = append(values, Decode(value))
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	if len(values) < n {
@@ -333,7 +338,7 @@ func (s *Set) Has(value string) (bool, error) {
 	value = Encode(value)
 	rows, err := s.host.db.Query("SELECT "+setCol+" FROM "+s.table+" WHERE "+setCol+" = ?", value)
 	if err != nil {
-		panic(err.Error())
+		return false, err
 	}
 	defer rows.Close()
 	var scanValue string
@@ -342,11 +347,13 @@ func (s *Set) Has(value string) (bool, error) {
 	for rows.Next() {
 		err = rows.Scan(&scanValue)
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 		counter++
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	if counter > 1 {
@@ -359,7 +366,7 @@ func (s *Set) Has(value string) (bool, error) {
 func (s *Set) GetAll() ([]string, error) {
 	rows, err := s.host.db.Query("SELECT " + setCol + " FROM " + s.table)
 	if err != nil {
-		panic(err.Error())
+		return []string{}, err
 	}
 	defer rows.Close()
 	var (
@@ -370,10 +377,12 @@ func (s *Set) GetAll() ([]string, error) {
 		err = rows.Scan(&value)
 		values = append(values, Decode(value))
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	return values, nil
@@ -449,7 +458,7 @@ func (h *HashMap) Set(owner, key, value string) error {
 func (h *HashMap) Get(owner, key string) (string, error) {
 	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", owner, key)
 	if err != nil {
-		panic(err.Error())
+		return "", err
 	}
 	defer rows.Close()
 	var value string
@@ -458,11 +467,13 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 		counter++
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	if counter == 0 {
@@ -475,7 +486,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 func (h *HashMap) Has(owner, key string) (bool, error) {
 	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", owner, key)
 	if err != nil {
-		panic(err.Error())
+		return false, err
 	}
 	defer rows.Close()
 	var value string
@@ -484,11 +495,13 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 		counter++
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	if counter > 1 {
@@ -501,7 +514,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 func (h *HashMap) Exists(owner string) (bool, error) {
 	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ?", owner)
 	if err != nil {
-		panic(err.Error())
+		return false, err
 	}
 	defer rows.Close()
 	var value string
@@ -510,11 +523,13 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 		counter++
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	return counter > 0, nil
@@ -524,7 +539,7 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 func (h *HashMap) GetAll() ([]string, error) {
 	rows, err := h.host.db.Query("SELECT " + ownerCol + " FROM " + h.table)
 	if err != nil {
-		panic(err.Error())
+		return []string{}, err
 	}
 	defer rows.Close()
 	var (
@@ -535,10 +550,12 @@ func (h *HashMap) GetAll() ([]string, error) {
 		err = rows.Scan(&value)
 		values = append(values, value)
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	return values, nil
@@ -618,7 +635,7 @@ func (kv *KeyValue) Set(key, value string) error {
 func (kv *KeyValue) Get(key string) (string, error) {
 	rows, err := kv.host.db.Query("SELECT "+valCol+" FROM "+kv.table+" WHERE "+keyCol+" = ?", key)
 	if err != nil {
-		panic(err.Error())
+		return "", err
 	}
 	defer rows.Close()
 	var value string
@@ -627,17 +644,49 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
+			// Unusual, worthy of panic
 			panic(err.Error())
 		}
 		counter++
 	}
 	if err := rows.Err(); err != nil {
+		// Unusual, worthy of panic
 		panic(err.Error())
 	}
 	if counter != 1 {
 		return "", errors.New("Wrong number of keys in KeyValue table: " + kv.table)
 	}
 	return Decode(value), nil
+}
+
+// Increase the value of a key, returns the new value
+// Returns an empty string if there were errors,
+// or "0" if the key does not already exist.
+func (kv *KeyValue) Inc(key string) (string, error) {
+	// Retreieve the current value, if any
+	num := 0
+	// See if we can fetch an existing value. NOTE: "== nil"
+	if val, err := kv.Get(key); err == nil {
+		// See if we can convert the value to a number. NOTE: "== nil"
+		if converted, err2 := strconv.Atoi(val); err2 == nil {
+			num = converted
+		}
+	} else {
+		// The key does not exist, create a new one.
+		// This is to reflect the behavior of INCR in Redis.
+		NewKeyValue(kv.host, kv.table)
+	}
+	// Num is now either 0 or the previous numeric value
+	num++
+	// Convert the new value to a string
+	val := strconv.Itoa(num)
+	// Store the new number
+	if err := kv.Set(key, val); err != nil {
+		// Saving the value failed
+		return "0", err
+	}
+	// Success
+	return val, nil
 }
 
 // Remove a key

@@ -293,3 +293,52 @@ func TestTwoFields(t *testing.T) {
 		t.Error("Error in twoFields functions")
 	}
 }
+
+func TestInc(t *testing.T) {
+	Verbose = true
+	const (
+		kvname     = "kv_234_test_test_test"
+		testkey    = "key_234_test_test_test"
+		testvalue0 = "9"
+		testvalue1 = "10"
+		testvalue2 = "1"
+	)
+	host := NewHost("travis:@127.0.0.1/") // for travis-ci
+	defer host.Close()
+	kv := NewKeyValue(host, kvname)
+
+	if err := kv.Set(testkey, testvalue0); err != nil {
+		t.Errorf("Error, could not set key and value! %s", err.Error())
+	}
+	if val, err := kv.Get(testkey); err != nil {
+		t.Errorf("Error, could not get key! %s", err.Error())
+	} else if val != testvalue0 {
+		t.Errorf("Error, wrong value! %s != %s", val, testvalue0)
+	}
+	incval, err := kv.Inc(testkey)
+	if err != nil {
+		t.Errorf("Error, could not INCR key! %s", err.Error())
+	}
+	if val, err := kv.Get(testkey); err != nil {
+		t.Errorf("Error, could not get key! %s", err.Error())
+	} else if val != testvalue1 {
+		t.Errorf("Error, wrong value! %s != %s", val, testvalue1)
+	} else if incval != testvalue1 {
+		t.Errorf("Error, wrong inc value! %s != %s", incval, testvalue1)
+	}
+	kv.Remove()
+	if _, err := kv.Get(testkey); err == nil {
+		t.Errorf("Error, could get key! %s", err.Error())
+	}
+	// Creates "0" and increases the value with 1
+	kv.Inc(testkey)
+	if val, err := kv.Get(testkey); err != nil {
+		t.Errorf("Error, could not get key! %s", err.Error())
+	} else if val != testvalue2 {
+		t.Errorf("Error, wrong value! %s != %s", val, testvalue2)
+	}
+	kv.Remove()
+	if _, err := kv.Get(testkey); err == nil {
+		t.Errorf("Error, could get key! %s", err.Error())
+	}
+}
