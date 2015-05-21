@@ -142,6 +142,56 @@ func TestSet(t *testing.T) {
 	var _ ISet = set
 }
 
+func TestRawSet(t *testing.T) {
+	Verbose = true
+
+	//host := New() // locally
+	host := NewHost("travis:@127.0.0.1/") // for travis-ci
+	host.SetRawUTF8(true)
+	//host := NewHost("go:go@/main") // laptop
+
+	defer host.Close()
+	set := NewSet(host, setname)
+	set.Clear()
+	if err := set.Add(testdata1); err != nil {
+		t.Errorf("Error, could not add item to set! %s", err.Error())
+	}
+	items, err := set.GetAll()
+	if err != nil {
+		t.Errorf("Error when retrieving set! %s", err.Error())
+	}
+	if len(items) != 1 {
+		t.Errorf("Error, wrong set length! %v", len(items))
+	}
+	if (len(items) > 0) && (items[0] != testdata1) {
+		t.Errorf("Error, wrong set contents! %v", items)
+	}
+	if err := set.Add(testdata2); err != nil {
+		t.Errorf("Error, could not add item to set! %s", err.Error())
+	}
+	if err := set.Add(testdata3); err != nil {
+		t.Errorf("Error, could not add item to set! %s", err.Error())
+	}
+	// Add an element twice. This is a set, so the element should only appear once.
+	if err := set.Add(testdata3); err != nil {
+		t.Errorf("Error, could not add item to set! %s", err.Error())
+	}
+	items, err = set.GetAll()
+	if err != nil {
+		t.Errorf("Error when retrieving set! %s", err.Error())
+	}
+	if len(items) != 3 {
+		t.Errorf("Error, wrong set length! %v\n%v\n", len(items), items)
+	}
+	err = set.Remove()
+	if err != nil {
+		t.Errorf("Error, could not remove set! %s", err.Error())
+	}
+
+	// Check that set qualifies for the ISet interface
+	var _ ISet = set
+}
+
 func TestHashMap(t *testing.T) {
 	Verbose = true
 
