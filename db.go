@@ -1,4 +1,4 @@
-// Simple way to use a MySQL/MariaDB database.
+// Package db offers a simple way to use a MySQL/MariaDB database
 package db
 
 import (
