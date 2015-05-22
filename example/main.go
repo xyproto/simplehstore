@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/xyproto/db"
+	"github.com/xyproto/simplemaria"
 )
 
 func main() {

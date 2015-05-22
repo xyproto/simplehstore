@@ -1,8 +1,8 @@
-db
-==
+simplemaria
+===========
 
-[![Build Status](https://travis-ci.org/xyproto/db.svg?branch=master)](https://travis-ci.org/xyproto/db)
-[![GoDoc](https://godoc.org/github.com/xyproto/db?status.svg)](http://godoc.org/github.com/xyproto/db)
+[![Build Status](https://travis-ci.org/xyproto/simplemaria.svg?branch=master)](https://travis-ci.org/xyproto/simplemaria)
+[![GoDoc](https://godoc.org/github.com/xyproto/simplemaria?status.svg)](http://godoc.org/github.com/xyproto/simplemaria)
 
 
 Easy way to use a MariaDB/MySQL database from Go.
@@ -11,7 +11,7 @@ Easy way to use a MariaDB/MySQL database from Go.
 Online API Documentation
 ------------------------
 
-[godoc.org](http://godoc.org/github.com/xyproto/db)
+[godoc.org](http://godoc.org/github.com/xyproto/simplemaria)
 
 
 Features and limitations
@@ -34,11 +34,11 @@ package main
 import (
 	"log"
 
-	"github.com/xyproto/db"
+	"github.com/xyproto/simplemaria"
 )
 
 func main() {
-	// Check if the db service is up
+	// Check if the simplemaria service is up
 	if err := db.TestConnection(); err != nil {
 		log.Fatalln("Could not connect to local database. Is the service up and running?")
 	}
