@@ -7,6 +7,7 @@ import (
 	//"encoding/base32"
 	//"encoding/base64"
 	"io/ioutil"
+	"log"
 )
 
 // MariaDB/MySQL does not handle some characters well.
@@ -44,7 +45,9 @@ func Decode(code *string) {
 	decompressedBytes, err := ioutil.ReadAll(decompressorReader)
 	decompressorReader.Close()
 	if err != nil {
-		panic(err.Error())
+		log.Println("*code:", *code)
+		log.Println("unhexedBytes:", unhexedBytes)
+		log.Fatalln(err)
 	}
 	*code = string(decompressedBytes)
 }

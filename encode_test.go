@@ -33,3 +33,8 @@ func TestEncodeDecodeWithEOB(t *testing.T) {
 		t.Error("Unable to encode and decode: " + original)
 	}
 }
+
+func TestDecodeEOF(t *testing.T) {
+	hex := "daaea4b2e9e4b738f18fe68b667e3bec7797598369"
+	Decode(&hex)
+}
