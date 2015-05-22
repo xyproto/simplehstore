@@ -624,6 +624,7 @@ func (h *HashMap) Remove() error {
 	return err
 }
 
+// Clear the contents
 func (h *HashMap) Clear() error {
 	// Clear the table
 	_, err := h.host.db.Exec("TRUNCATE TABLE " + h.table)
