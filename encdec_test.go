@@ -1,7 +1,10 @@
 package db
 
 import (
+	"log"
+	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestEncodeDecode(t *testing.T) {
@@ -34,7 +37,26 @@ func TestEncodeDecodeWithEOB(t *testing.T) {
 	}
 }
 
-func TestDecodeEOF(t *testing.T) {
-	hex := "daaea4b2e9e4b738f18fe68b667e3bec7797598369"
-	Decode(&hex)
+// Generate a random string of the given length.
+func randomString(length int) string {
+	b := make([]byte, length)
+	for i := 0; i < length; i++ {
+		b[i] = byte(rand.Int63() & 0xff)
+	}
+	return string(b)
+}
+
+func TestRandom(t *testing.T) {
+	// Generate 10 random strings and check if they encode and decode correctly
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < 10; i++ {
+		log.Printf("Random string %d\n", i)
+		s1 := randomString(100)
+		s2 := s1
+		Encode(&s2)
+		Decode(&s2)
+		if s1 != s2 {
+			t.Error(s1, "is different from", s2)
+		}
+	}
 }
