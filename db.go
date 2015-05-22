@@ -32,7 +32,7 @@ type (
 
 const (
 	// Version number. Stable API within major version numbers.
-	Version = 1.0
+	Version = 1.1
 
 	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = ""     // "username:password@server:port/"
