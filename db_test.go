@@ -7,6 +7,7 @@ import (
 	"code.google.com/p/go.crypto/bcrypt"
 	"crypto/sha256"
 	"github.com/xyproto/permissions2"
+	"github.com/xyproto/pinterface"
 	"io"
 )
 
@@ -90,7 +91,7 @@ func TestList(t *testing.T) {
 	}
 
 	// Check that list qualifies for the IList interface
-	var _ IList = list
+	var _ pinterface.IList = list
 }
 
 func TestSet(t *testing.T) {
@@ -139,7 +140,7 @@ func TestSet(t *testing.T) {
 	}
 
 	// Check that set qualifies for the ISet interface
-	var _ ISet = set
+	var _ pinterface.ISet = set
 }
 
 func TestRawSet(t *testing.T) {
@@ -189,7 +190,7 @@ func TestRawSet(t *testing.T) {
 	}
 
 	// Check that set qualifies for the ISet interface
-	var _ ISet = set
+	var _ pinterface.ISet = set
 }
 
 func TestHashMap(t *testing.T) {
@@ -243,7 +244,7 @@ func TestHashMap(t *testing.T) {
 	}
 
 	// Check that hashmap qualifies for the IHashMap interface
-	var _ IHashMap = hashmap
+	var _ pinterface.IHashMap = hashmap
 }
 
 func TestKeyValue(t *testing.T) {
@@ -279,7 +280,7 @@ func TestKeyValue(t *testing.T) {
 		t.Errorf("Error, could not remove keyvalue! %s", err.Error())
 	}
 	// Check that keyvalue qualifies for the IKeyValue interface
-	var _ IKeyValue = keyvalue
+	var _ pinterface.IKeyValue = keyvalue
 }
 
 func TestHashStorage(t *testing.T) {
