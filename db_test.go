@@ -5,8 +5,9 @@ import (
 
 	// For testing the storage of bcrypt password hashes
 	"code.google.com/p/go.crypto/bcrypt"
+
 	"crypto/sha256"
-	"github.com/xyproto/permissions2"
+	"github.com/xyproto/cookie"
 	"github.com/xyproto/pinterface"
 	"io"
 )
@@ -317,7 +318,7 @@ func TestHashStorage(t *testing.T) {
 	// sha256 test
 
 	hasher := sha256.New()
-	io.WriteString(hasher, password+permissions.RandomCookieFriendlyString(30)+username)
+	io.WriteString(hasher, password+cookie.RandomCookieFriendlyString(30)+username)
 	passwordHash = hasher.Sum(nil)
 	value = string(passwordHash)
 
