@@ -1,4 +1,4 @@
-package db
+package simplemaria
 
 import (
 	"github.com/xyproto/pinterface"

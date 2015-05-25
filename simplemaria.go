@@ -1,5 +1,5 @@
-// Package db offers a simple way to use a MySQL/MariaDB database
-package db
+// Package simplemaria offers a simple way to use a MySQL/MariaDB database
+package simplemaria
 
 import (
 	"database/sql"
@@ -13,7 +13,7 @@ import (
 
 const (
 	// Version number. Stable API within major version numbers.
-	Version = 1.2
+	Version = 2.0
 )
 
 type Host struct {
