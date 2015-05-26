@@ -41,7 +41,10 @@ func TestList(t *testing.T) {
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
-	list := NewList(host, listname)
+	list, err := NewList(host, listname)
+	if err != nil {
+		t.Error(err)
+	}
 	list.Clear()
 	if err := list.Add(testdata1); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
@@ -103,7 +106,10 @@ func TestSet(t *testing.T) {
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
-	set := NewSet(host, setname)
+	set, err := NewSet(host, setname)
+	if err != nil {
+		t.Error(err)
+	}
 	set.Clear()
 	if err := set.Add(testdata1); err != nil {
 		t.Errorf("Error, could not add item to set! %s", err.Error())
@@ -153,7 +159,10 @@ func TestRawSet(t *testing.T) {
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
-	set := NewSet(host, setname)
+	set, err := NewSet(host, setname)
+	if err != nil {
+		t.Error(err)
+	}
 	set.Clear()
 	if err := set.Add(testdata1); err != nil {
 		t.Errorf("Error, could not add item to set! %s", err.Error())
@@ -202,7 +211,10 @@ func TestHashMap(t *testing.T) {
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
-	hashmap := NewHashMap(host, hashmapname)
+	hashmap, err := NewHashMap(host, hashmapname)
+	if err != nil {
+		t.Error(err)
+	}
 	hashmap.Clear()
 
 	username := "bob"
@@ -256,7 +268,10 @@ func TestKeyValue(t *testing.T) {
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
-	keyvalue := NewKeyValue(host, keyvaluename)
+	keyvalue, err := NewKeyValue(host, keyvaluename)
+	if err != nil {
+		t.Error(err)
+	}
 	keyvalue.Clear()
 
 	key := "password"
@@ -292,7 +307,10 @@ func TestHashStorage(t *testing.T) {
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
-	hashmap := NewHashMap(host, hashmapname)
+	hashmap, err := NewHashMap(host, hashmapname)
+	if err != nil {
+		t.Error(err)
+	}
 	hashmap.Clear()
 
 	username := "bob"
@@ -357,7 +375,10 @@ func TestInc(t *testing.T) {
 	)
 	host := NewHost("travis:@127.0.0.1/") // for travis-ci
 	defer host.Close()
-	kv := NewKeyValue(host, kvname)
+	kv, err := NewKeyValue(host, kvname)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := kv.Set(testkey, testvalue0); err != nil {
 		t.Errorf("Error, could not set key and value! %s", err.Error())

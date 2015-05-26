@@ -200,17 +200,17 @@ func (host *Host) Ping() error {
 /* --- List functions --- */
 
 // Create a new list. Lists are ordered.
-func NewList(host *Host, name string) *List {
+func NewList(host *Host, name string) (*List, error) {
 	l := &List{host, name}
 	// list is the name of the column
 	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id INT PRIMARY KEY AUTO_INCREMENT, " + listCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		// This is more likely to happen at the start of the program, hence the panic.
-		panic("Could not create table " + name + ": " + err.Error())
+		return nil, err
 	}
 	if Verbose {
 		log.Println("Created table " + name + " in database " + host.dbname)
 	}
-	return l
+	return l, nil
 }
 
 // Add an element to the list
@@ -329,17 +329,16 @@ func (l *List) Clear() error {
 /* --- Set functions --- */
 
 // Create a new set
-func NewSet(host *Host, name string) *Set {
+func NewSet(host *Host, name string) (*Set, error) {
 	s := &Set{host, name}
 	// list is the name of the column
 	if _, err := s.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (" + setCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
-		// This is more likely to happen at the start of the program, hence the panic.
-		panic("Could not create table " + name + ": " + err.Error())
+		return nil, err
 	}
 	if Verbose {
 		log.Println("Created table " + name + " in database " + host.dbname)
 	}
-	return s
+	return s, nil
 }
 
 // Add an element to the set
@@ -443,20 +442,18 @@ func (s *Set) Clear() error {
 /* --- HashMap functions --- */
 
 // Create a new hashmap
-func NewHashMap(host *Host, name string) *HashMap {
+func NewHashMap(host *Host, name string) (*HashMap, error) {
 	h := &HashMap{host, name}
 	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
 	// Using three columns: element id, key and value
 	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s, %s %s)", name, ownerCol, sqltype, keyCol, sqltype, valCol, sqltype)
 	if _, err := h.host.db.Exec(query); err != nil {
-		// This is more likely to happen at the start of the program,
-		// hence the panic.
-		panic("Could not create table " + name + ": " + err.Error())
+		return nil, err
 	}
 	if Verbose {
 		log.Println("Created table " + name + " in database " + host.dbname)
 	}
-	return h
+	return h, nil
 }
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
@@ -637,19 +634,17 @@ func (h *HashMap) Clear() error {
 /* --- KeyValue functions --- */
 
 // Create a new key/value
-func NewKeyValue(host *Host, name string) *KeyValue {
+func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 	kv := &KeyValue{host, name}
 	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
 	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s)", name, keyCol, sqltype, valCol, sqltype)
 	if _, err := kv.host.db.Exec(query); err != nil {
-		// This is more likely to happen at the start of the program,
-		// hence the panic.
-		panic("Could not create table " + name + ": " + err.Error())
+		return nil, err
 	}
 	if Verbose {
 		log.Println("Created table " + name + " in database " + host.dbname)
 	}
-	return kv
+	return kv, nil
 
 }
 
