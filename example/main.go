@@ -27,7 +27,7 @@ func main() {
 	// Create a list named "greetings"
 	list, err := simplemaria.NewList(host, "greetings")
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("Could not create list!")
 	}
 
 	// Add "hello" to the list, check if there are errors
