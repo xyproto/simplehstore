@@ -25,7 +25,10 @@ func main() {
 	defer host.Close()
 
 	// Create a list named "greetings"
-	list := simplemaria.NewList(host, "greetings")
+	list, err := simplemaria.NewList(host, "greetings")
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	// Add "hello" to the list, check if there are errors
 	if list.Add("hello") != nil {
