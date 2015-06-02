@@ -1,4 +1,4 @@
-// Package simplemaria offers a simple way to use a MySQL/MariaDB database
+// Package simplemaria offers a simple way to use a MySQL/MariaDB database.
 package simplemaria
 
 import (
