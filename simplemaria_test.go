@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	// For testing the storage of bcrypt password hashes
-	"code.google.com/p/go.crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt"
 
 	"crypto/sha256"
 	"github.com/xyproto/cookie"
