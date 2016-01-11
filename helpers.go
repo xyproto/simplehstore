@@ -1,4 +1,4 @@
-package simplemaria
+package simplegres
 
 import (
 	"log"
@@ -108,18 +108,18 @@ func splitConnectionString(connectionString string) (string, string, bool, strin
 	return username, password, hasPassword, host, port, dbname
 }
 
-// Build a DSN
+// Build an URL
 func buildConnectionString(username, password string, hasPassword bool, host, port, dbname string) string {
 
 	// Build the new connection string
 
-	newConnectionString := ""
+	var newConnectionString string
 	if (host != "") && (port != "") {
-		newConnectionString += "tcp(" + host + ":" + port + ")"
+		newConnectionString += host + ":" + port
 	} else if host != "" {
-		newConnectionString += "tcp(" + host + ")"
+		newConnectionString += host
 	} else if port != "" {
-		newConnectionString += "tcp(" + ":" + port + ")"
+		newConnectionString += ":" + port
 		log.Fatalln("There is only a port. This should not happen.")
 	}
 	if (username != "") && hasPassword {
@@ -131,8 +131,12 @@ func buildConnectionString(username, password string, hasPassword bool, host, po
 	}
 	newConnectionString += "/"
 
+	newConnectionString = "postgres://" + newConnectionString
+
+	newConnectionString += "?sslmode=disable"
+
 	if Verbose {
-		log.Println("DSN:", newConnectionString)
+		log.Println("URL:", newConnectionString)
 	}
 
 	return newConnectionString

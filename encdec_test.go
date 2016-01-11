@@ -1,4 +1,4 @@
-package simplemaria
+package simplegres
 
 import (
 	"log"

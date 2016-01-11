@@ -1,17 +1,22 @@
-simplemaria
+simplegres
 ===========
 
-[![Build Status](https://travis-ci.org/xyproto/simplemaria.svg?branch=master)](https://travis-ci.org/xyproto/simplemaria)
-[![GoDoc](https://godoc.org/github.com/xyproto/simplemaria?status.svg)](http://godoc.org/github.com/xyproto/simplemaria)
+WORK IN PROGRESS, NOT COMPLETE, WILL IMPLEMENT WITH hstore
 
 
-Easy way to use a MariaDB/MySQL database from Go.
+-----------------------
+
+[![Build Status](https://travis-ci.org/xyproto/simplegres.svg?branch=master)](https://travis-ci.org/xyproto/simplegres)
+[![GoDoc](https://godoc.org/github.com/xyproto/simplegres?status.svg)](http://godoc.org/github.com/xyproto/simplegres)
+
+
+Easy way to use a PostgreSQL database from Go.
 
 
 Online API Documentation
 ------------------------
 
-[godoc.org](http://godoc.org/github.com/xyproto/simplemaria)
+[godoc.org](http://godoc.org/github.com/xyproto/simplegres)
 
 
 Features and limitations
@@ -22,7 +27,6 @@ Features and limitations
 * Uses the [mysql](https://github.com/go-sql-driver/mysql) package.
 * Modeled after [simpleredis](https://github.com/xyproto/simpleredis).
 * The hash maps behaves like hash maps, but are not backed by actual hashmaps, unlike with [simpleredis](https://github.com/xyproto/simpleredis). This is for keeping compatibility with simpleredis. If performance when scaling up is a concern, simpleredis backed by [redis](https://redis.io) might be a better choice.
-* MariaDB/MySQL normally has issues with variable size UTF-8 strings, for some combinations of characters. This package avoids these problems by compressing and hex encoding the data before storing in the database. This may slow down or speed up the time it takes to access the data, depending on your setup, but it's a safe way to encode *any* string. This behavior is optional and can be disabled with `host.SetRawUTF8(true)`.
 
 
 Sample usage
@@ -34,11 +38,11 @@ package main
 import (
 	"log"
 
-	"github.com/xyproto/simplemaria"
+	"github.com/xyproto/simplegres"
 )
 
 func main() {
-	// Check if the simplemaria service is up
+	// Check if the simplegres service is up
 	if err := db.TestConnection(); err != nil {
 		log.Fatalln("Could not connect to local database. Is the service up and running?")
 	}
@@ -83,7 +87,7 @@ func main() {
 Testing
 -------
 
-A MariaDB/MySQL Database must be up and running locally for `go test` to work.
+A PostgreSQL Database must be up and running locally for `go test` to work.
 
 
 Version, license and author

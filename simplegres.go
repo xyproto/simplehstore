@@ -1,14 +1,15 @@
-// Package simplemaria offers a simple way to use a MySQL/MariaDB database.
-package simplemaria
+// Package simplegres offers a simple way to use a MySQL/MariaDB database.
+package simplegres
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"strconv"
 	"strings"
+
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -17,9 +18,9 @@ const (
 )
 
 type Host struct {
-	db      *sql.DB
-	dbname  string
-	rawUTF8 bool
+	db           *sql.DB
+	dbname       string
+	compressUTF8 bool
 }
 
 // Common for each of the db datastructures used here
@@ -41,10 +42,9 @@ const (
 	defaultDatabaseServer = ""     // "username:password@server:port/"
 	defaultDatabaseName   = "test" // "main"
 	defaultStringLength   = 65535  // using VARCHAR
-	defaultPort           = 3306
+	defaultPort           = 5432
 
-	// Requires MySQL >= 5.53 and MariaDB >= ? for utf8mb4
-	charset = "utf8mb4" // "utf8"
+	encoding = "UTF8"
 
 	// Column names
 	listCol  = "a_list"
@@ -65,7 +65,7 @@ func TestConnection() (err error) {
 func TestConnectionHost(connectionString string) (err error) {
 	newConnectionString, _ := rebuildConnectionString(connectionString)
 	// Connect to the given host:port
-	db, err := sql.Open("mysql", newConnectionString)
+	db, err := sql.Open("postgres", newConnectionString)
 	defer db.Close()
 	err = db.Ping()
 	if Verbose {
@@ -81,7 +81,7 @@ func TestConnectionHost(connectionString string) (err error) {
 // Test if a given database server is up and running.
 func TestConnectionHostWithDSN(connectionString string) (err error) {
 	// Connect to the given host:port
-	db, err := sql.Open("mysql", connectionString)
+	db, err := sql.Open("postgres", connectionString)
 	defer db.Close()
 	err = db.Ping()
 	if Verbose {
@@ -102,7 +102,7 @@ func NewHost(connectionString string) *Host {
 
 	newConnectionString, dbname := rebuildConnectionString(connectionString)
 
-	db, err := sql.Open("mysql", newConnectionString)
+	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")
 	}
@@ -122,7 +122,7 @@ func NewHost(connectionString string) *Host {
 // Create a new database connection with a valid DSN.
 func NewHostWithDSN(connectionString string, dbname string) *Host {
 
-	db, err := sql.Open("mysql", connectionString)
+	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Fatalln("Could not connect to " + connectionString + "!")
 	}
@@ -148,9 +148,9 @@ func New() *Host {
 	return NewHost(connectionString)
 }
 
-// Should the UTF-8 data be raw, and not hex encoded and compressed?
-func (h *Host) SetRawUTF8(enabled bool) {
-	h.rawUTF8 = enabled
+// Should the UTF-8 data be hex encoded and compressed?
+func (h *Host) SetCompressUTF8(enabled bool) {
+	h.compressUTF8 = enabled
 }
 
 // Select a different database. Create the database if needed.
@@ -167,7 +167,8 @@ func (host *Host) SelectDatabase(dbname string) error {
 
 // Will create the database if it does not already exist
 func (host *Host) createDatabase() error {
-	if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = " + charset); err != nil {
+	//if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = " + encoding); err != nil {
+	if _, err := host.db.Exec("CREATE DATABASE " + host.dbname + " WITH ENCODING '" + encoding + "'"); err != nil {
 		return err
 	}
 	if Verbose {
@@ -215,7 +216,7 @@ func NewList(host *Host, name string) (*List, error) {
 
 // Add an element to the list
 func (l *List) Add(value string) error {
-	if !l.host.rawUTF8 {
+	if l.host.compressUTF8 {
 		Encode(&value)
 	}
 	// list is the name of the column
@@ -236,7 +237,7 @@ func (l *List) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		if !l.host.rawUTF8 {
+		if l.host.compressUTF8 {
 			Decode(&value)
 		}
 		values = append(values, value)
@@ -274,7 +275,7 @@ func (l *List) GetLast() (string, error) {
 		// Unusual, worthy of panic
 		panic(err.Error())
 	}
-	if !l.host.rawUTF8 {
+	if l.host.compressUTF8 {
 		Decode(&value)
 	}
 	return value, nil
@@ -293,7 +294,7 @@ func (l *List) GetLastN(n int) ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		if !l.host.rawUTF8 {
+		if l.host.compressUTF8 {
 			Decode(&value)
 		}
 		values = append(values, value)
@@ -344,7 +345,7 @@ func NewSet(host *Host, name string) (*Set, error) {
 // Add an element to the set
 func (s *Set) Add(value string) error {
 	originalValue := value
-	if !s.host.rawUTF8 {
+	if s.host.compressUTF8 {
 		Encode(&value)
 	}
 	// Check if the value is not already there before adding
@@ -357,7 +358,7 @@ func (s *Set) Add(value string) error {
 
 // Check if a given value is in the set
 func (s *Set) Has(value string) (bool, error) {
-	if !s.host.rawUTF8 {
+	if s.host.compressUTF8 {
 		Encode(&value)
 	}
 	rows, err := s.host.db.Query("SELECT "+setCol+" FROM "+s.table+" WHERE "+setCol+" = ?", value)
@@ -399,7 +400,7 @@ func (s *Set) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		if !s.host.rawUTF8 {
+		if s.host.compressUTF8 {
 			Decode(&value)
 		}
 		values = append(values, value)
@@ -417,7 +418,7 @@ func (s *Set) GetAll() ([]string, error) {
 
 // Remove an element from the set
 func (s *Set) Del(value string) error {
-	if !s.host.rawUTF8 {
+	if s.host.compressUTF8 {
 		Encode(&value)
 	}
 	// Remove a value from the table
@@ -458,7 +459,7 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
-	if !h.host.rawUTF8 {
+	if h.host.compressUTF8 {
 		Encode(&value)
 	}
 	// See if the owner and key already exists
@@ -508,7 +509,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	if counter == 0 {
 		return "", errors.New("No such owner/key: " + owner + "/" + key)
 	}
-	if !h.host.rawUTF8 {
+	if h.host.compressUTF8 {
 		Decode(&value)
 	}
 	return value, nil
@@ -650,7 +651,7 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 
 // Set a key and value
 func (kv *KeyValue) Set(key, value string) error {
-	if !kv.host.rawUTF8 {
+	if kv.host.compressUTF8 {
 		Encode(&value)
 	}
 	if _, err := kv.Get(key); err != nil {
@@ -689,7 +690,7 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	if counter != 1 {
 		return "", errors.New("Wrong number of keys in KeyValue table: " + kv.table)
 	}
-	if !kv.host.rawUTF8 {
+	if kv.host.compressUTF8 {
 		Decode(&value)
 	}
 	return value, nil

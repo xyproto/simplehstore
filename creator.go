@@ -1,4 +1,4 @@
-package simplemaria
+package simplegres
 
 import (
 	"github.com/xyproto/pinterface"
@@ -6,26 +6,26 @@ import (
 
 // For implementing pinterface.ICreator
 
-type MariaCreator struct {
+type PostgresCreator struct {
 	host *Host
 }
 
-func NewCreator(host *Host) *MariaCreator {
-	return &MariaCreator{host}
+func NewCreator(host *Host) *PostgresCreator {
+	return &PostgresCreator{host}
 }
 
-func (m *MariaCreator) NewList(id string) (pinterface.IList, error) {
+func (m *PostgresCreator) NewList(id string) (pinterface.IList, error) {
 	return NewList(m.host, id)
 }
 
-func (m *MariaCreator) NewSet(id string) (pinterface.ISet, error) {
+func (m *PostgresCreator) NewSet(id string) (pinterface.ISet, error) {
 	return NewSet(m.host, id)
 }
 
-func (m *MariaCreator) NewHashMap(id string) (pinterface.IHashMap, error) {
+func (m *PostgresCreator) NewHashMap(id string) (pinterface.IHashMap, error) {
 	return NewHashMap(m.host, id)
 }
 
-func (m *MariaCreator) NewKeyValue(id string) (pinterface.IKeyValue, error) {
+func (m *PostgresCreator) NewKeyValue(id string) (pinterface.IKeyValue, error) {
 	return NewKeyValue(m.host, id)
 }

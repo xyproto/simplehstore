@@ -1,4 +1,4 @@
-package simplemaria
+package simplegres
 
 import (
 	"testing"
@@ -7,9 +7,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"crypto/sha256"
+	"io"
+
 	"github.com/xyproto/cookie"
 	"github.com/xyproto/pinterface"
-	"io"
 )
 
 const (
@@ -155,7 +156,7 @@ func TestRawSet(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost("travis:@127.0.0.1/") // for travis-ci
-	host.SetRawUTF8(true)
+	host.SetCompressUTF8(false)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
