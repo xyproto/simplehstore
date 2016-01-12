@@ -1,11 +1,6 @@
 simplegres
 ===========
 
-WORK IN PROGRESS, NOT COMPLETE, WILL IMPLEMENT WITH hstore
-
-
------------------------
-
 [![Build Status](https://travis-ci.org/xyproto/simplegres.svg?branch=master)](https://travis-ci.org/xyproto/simplegres)
 [![GoDoc](https://godoc.org/github.com/xyproto/simplegres?status.svg)](http://godoc.org/github.com/xyproto/simplegres)
 
@@ -24,7 +19,7 @@ Features and limitations
 
 * Supports simple use of lists, hashmaps, sets and key/values.
 * Deals mainly with strings.
-* Uses the [mysql](https://github.com/go-sql-driver/mysql) package.
+* Uses the [pq](https://github.com/lib/pq) package.
 * Modeled after [simpleredis](https://github.com/xyproto/simpleredis).
 * The hash maps behaves like hash maps, but are not backed by actual hashmaps, unlike with [simpleredis](https://github.com/xyproto/simpleredis). This is for keeping compatibility with simpleredis. If performance when scaling up is a concern, simpleredis backed by [redis](https://redis.io) might be a better choice.
 
