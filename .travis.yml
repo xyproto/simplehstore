@@ -1,7 +1,7 @@
 language: go
 
 services:
-    - postgresql
+    - postgresql: "9.4"
 
 go:
     - 1.3
