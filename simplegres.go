@@ -40,7 +40,7 @@ const (
 
 	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = ""     // "username:password@server:port/"
-	defaultDatabaseName   = "test" // "main"
+	defaultDatabaseName   = "travis_ci_test" // "main"
 	defaultStringLength   = 65535  // using VARCHAR
 	defaultPort           = 5432
 
@@ -167,9 +167,11 @@ func (host *Host) SelectDatabase(dbname string) error {
 
 // Will create the database if it does not already exist
 func (host *Host) createDatabase() error {
-	//if _, err := host.db.Exec("CREATE DATABASE IF NOT EXISTS " + host.dbname + " CHARACTER SET = " + encoding); err != nil {
 	if _, err := host.db.Exec("CREATE DATABASE " + host.dbname + " WITH ENCODING '" + encoding + "'"); err != nil {
-		return err
+		if !strings.HasSuffix(err.Error(), "already exists") {
+			// Another error message
+			return err
+		}
 	}
 	if Verbose {
 		log.Println("Created database " + host.dbname)
@@ -179,9 +181,10 @@ func (host *Host) createDatabase() error {
 
 // Use the host.dbname database
 func (host *Host) useDatabase() error {
-	if _, err := host.db.Exec("USE " + host.dbname); err != nil {
-		return err
-	}
+	// PostgreSQL is always using the database that was connected to
+	//if _, err := host.db.Exec("USE " + host.dbname); err != nil {
+	//	return err
+	//}
 	if Verbose {
 		log.Println("Using database " + host.dbname)
 	}
@@ -204,9 +207,11 @@ func (host *Host) Ping() error {
 func NewList(host *Host, name string) (*List, error) {
 	l := &List{host, name}
 	// list is the name of the column
-	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id INT PRIMARY KEY AUTO_INCREMENT, " + listCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := l.host.db.Exec("CREATE TABLE " + name + " (id SERIAL PRIMARY KEY, " + listCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		// This is more likely to happen at the start of the program, hence the panic.
-		return nil, err
+		if !strings.HasSuffix(err.Error(), "already exists") {
+			return nil, err
+		}
 	}
 	if Verbose {
 		log.Println("Created table " + name + " in database " + host.dbname)
@@ -220,7 +225,7 @@ func (l *List) Add(value string) error {
 		Encode(&value)
 	}
 	// list is the name of the column
-	_, err := l.host.db.Exec("INSERT INTO "+l.table+" ("+listCol+") VALUES (?)", value)
+	_, err := l.host.db.Exec("INSERT INTO "+l.table+" ("+listCol+") VALUES (DEFAULT, " + value + ")")
 	return err
 }
 
@@ -333,8 +338,10 @@ func (l *List) Clear() error {
 func NewSet(host *Host, name string) (*Set, error) {
 	s := &Set{host, name}
 	// list is the name of the column
-	if _, err := s.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (" + setCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
-		return nil, err
+	if _, err := s.host.db.Exec("CREATE TABLE " + name + " (" + setCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+		if !strings.HasSuffix(err.Error(), "already exists") {
+			return nil, err
+		}
 	}
 	if Verbose {
 		log.Println("Created table " + name + " in database " + host.dbname)
@@ -447,9 +454,11 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 	h := &HashMap{host, name}
 	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
 	// Using three columns: element id, key and value
-	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s, %s %s)", name, ownerCol, sqltype, keyCol, sqltype, valCol, sqltype)
+	query := fmt.Sprintf("CREATE TABLE %s (%s %s, %s %s, %s %s)", name, ownerCol, sqltype, keyCol, sqltype, valCol, sqltype)
 	if _, err := h.host.db.Exec(query); err != nil {
-		return nil, err
+		if !strings.HasSuffix(err.Error(), "already exists") {
+			return nil, err
+		}
 	}
 	if Verbose {
 		log.Println("Created table " + name + " in database " + host.dbname)
@@ -638,9 +647,11 @@ func (h *HashMap) Clear() error {
 func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 	kv := &KeyValue{host, name}
 	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
-	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, %s %s)", name, keyCol, sqltype, valCol, sqltype)
+	query := fmt.Sprintf("CREATE TABLE %s (%s %s, %s %s)", name, keyCol, sqltype, valCol, sqltype)
 	if _, err := kv.host.db.Exec(query); err != nil {
-		return nil, err
+		if !strings.HasSuffix(err.Error(), "already exists") {
+			return nil, err
+		}
 	}
 	if Verbose {
 		log.Println("Created table " + name + " in database " + host.dbname)
