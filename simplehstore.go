@@ -44,7 +44,7 @@ const (
 	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = ""               // "username:password@server:port/"
 	defaultDatabaseName   = "travis_ci_test" // "main"
-	defaultStringType     = "VARCHAR(65535)" // or just TEXT?
+	defaultStringType     = "TEXT"
 	defaultPort           = 5432
 
 	encoding = "UTF8"
@@ -711,7 +711,7 @@ func (kv *KeyValue) Inc(key string) (string, error) {
 	// See if we can fetch an existing value. NOTE: "== nil"
 	if val, err := kv.Get(key); err == nil {
 		// See if we can convert the value to a number. NOTE: "== nil"
-		if converted, err_conv := strconv.Atoi(val); err_conv == nil {
+		if converted, errConv := strconv.Atoi(val); errConv == nil {
 			num = converted
 		}
 	} else {
