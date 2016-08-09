@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	// Using the PostgreSQL database engine
 	_ "github.com/lib/pq"
 )
 
@@ -20,8 +21,8 @@ const (
 )
 
 type Host struct {
-	db     *sql.DB
-	dbname string
+	db      *sql.DB
+	dbname  string
 	rawUTF8 bool
 }
 
@@ -43,7 +44,7 @@ const (
 	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = ""               // "username:password@server:port/"
 	defaultDatabaseName   = "travis_ci_test" // "main"
-	defaultStringLength   = 65535            // using VARCHAR
+	defaultStringType     = "VARCHAR(65535)" // or just TEXT?
 	defaultPort           = 5432
 
 	encoding = "UTF8"
@@ -169,9 +170,9 @@ func (host *Host) createDatabase() error {
 	}
 	// Ignore the error if hstore has already been enabled
 	if _, err := host.db.Exec("CREATE EXTENSION hstore"); err == nil {
-	    if Verbose {
-		    log.Println("Enabled HSTORE")
-	    }
+		if Verbose {
+			log.Println("Enabled HSTORE")
+		}
 	}
 	return nil
 }
@@ -203,7 +204,7 @@ func (host *Host) Ping() error {
 // Create a new list. Lists are ordered.
 func NewList(host *Host, name string) (*List, error) {
 	l := &List{host, name}
-	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id SERIAL PRIMARY KEY, " + listCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id SERIAL PRIMARY KEY, " + listCol + " " + defaultStringType + ")"); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
 		}
@@ -332,7 +333,7 @@ func (l *List) Clear() error {
 func NewSet(host *Host, name string) (*Set, error) {
 	s := &Set{host, name}
 	// list is the name of the column
-	if _, err := s.host.db.Exec("CREATE TABLE " + name + " (" + setCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
+	if _, err := s.host.db.Exec("CREATE TABLE " + name + " (" + setCol + " " + defaultStringType + ")"); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
 		}
@@ -362,7 +363,7 @@ func (s *Set) Has(value string) (bool, error) {
 	if !s.host.rawUTF8 {
 		Encode(&value)
 	}
-	rows, err := s.host.db.Query("SELECT "+setCol+" FROM "+s.table+" WHERE "+setCol+" = '" + value + "'")
+	rows, err := s.host.db.Query("SELECT " + setCol + " FROM " + s.table + " WHERE " + setCol + " = '" + value + "'")
 	if err != nil {
 		return false, err
 	}
@@ -423,7 +424,7 @@ func (s *Set) Del(value string) error {
 		Encode(&value)
 	}
 	// Remove a value from the table
-	_, err := s.host.db.Exec("DELETE FROM "+s.table+" WHERE "+setCol+" = '" + value + "'")
+	_, err := s.host.db.Exec("DELETE FROM " + s.table + " WHERE " + setCol + " = '" + value + "'")
 	return err
 }
 
@@ -446,9 +447,8 @@ func (s *Set) Clear() error {
 // Create a new hashmap
 func NewHashMap(host *Host, name string) (*HashMap, error) {
 	h := &HashMap{host, name}
-	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
 	// Using three columns: element id, key and value
-	query := fmt.Sprintf("CREATE TABLE %s (%s %s, attr hstore)", name, ownerCol, sqltype)
+	query := fmt.Sprintf("CREATE TABLE %s (%s %s, attr hstore)", name, ownerCol, defaultStringType)
 	if _, err := h.host.db.Exec(query); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
@@ -479,7 +479,7 @@ func (h *HashMap) Set(owner, key, value string) error {
 			log.Println("Updated HSTORE table: " + h.table)
 		}
 	} else {
-		_, err = h.host.db.Exec("INSERT INTO " + h.table + " ("+ownerCol+", attr) VALUES ('" + owner + "', '\"" + key + "\"=>\"" + value + "\"')")
+		_, err = h.host.db.Exec("INSERT INTO " + h.table + " (" + ownerCol + ", attr) VALUES ('" + owner + "', '\"" + key + "\"=>\"" + value + "\"')")
 		if Verbose {
 			log.Println("Added to HSTORE table: " + h.table)
 		}
@@ -520,7 +520,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 
 // Check if a given owner + key is in the hash map
 func (h *HashMap) Has(owner, key string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT attr -> '" + key + "' FROM "+h.table+" WHERE "+ownerCol+" = '" + owner + "'")
+	rows, err := h.host.db.Query("SELECT attr -> '" + key + "' FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "'")
 	if err != nil {
 		return false, err
 	}
@@ -548,7 +548,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 
 // Check if a given owner exists as a hash map at all
 func (h *HashMap) Exists(owner string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = '" + owner + "'")
+	rows, err := h.host.db.Query("SELECT attr FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "'")
 	if err != nil {
 		return false, err
 	}
@@ -584,9 +584,9 @@ func (h *HashMap) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-	    if !h.host.rawUTF8 {
-		    Decode(&value)
-	    }
+		if !h.host.rawUTF8 {
+			Decode(&value)
+		}
 		values = append(values, value)
 		if err != nil {
 			// Unusual, worthy of panic
@@ -610,7 +610,7 @@ func (h *HashMap) DelKey(owner, key string) error {
 // Remove an element (for instance a user)
 func (h *HashMap) Del(owner string) error {
 	// Remove an element id from the table
-	results, err := h.host.db.Exec("DELETE FROM "+h.table+" WHERE "+ownerCol+" = '" + owner + "'")
+	results, err := h.host.db.Exec("DELETE FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "'")
 	if err != nil {
 		return err
 	}
@@ -640,24 +640,19 @@ func (h *HashMap) Clear() error {
 
 /* --- KeyValue functions --- */
 
-var valCol = "OST"
-var keyCol = "KAKE"
-
 // Create a new key/value
 func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 	kv := &KeyValue{host, name}
-	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
-	query := fmt.Sprintf("CREATE TABLE %s (%s %s, %s %s)", name, keyCol, sqltype, valCol, sqltype)
+	query := fmt.Sprintf("CREATE TABLE %s (attr hstore)", name)
 	if _, err := kv.host.db.Exec(query); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
 		}
 	}
 	if Verbose {
-		log.Println("Created table " + name + " in database " + host.dbname)
+		log.Println("Created HSTORE table " + name + " in database " + host.dbname)
 	}
 	return kv, nil
-
 }
 
 // Set a key and value
@@ -667,18 +662,18 @@ func (kv *KeyValue) Set(key, value string) error {
 	}
 	if _, err := kv.Get(key); err != nil {
 		// Key does not exist, create it
-		_, err = kv.host.db.Exec("INSERT INTO "+kv.table+" ("+keyCol+", "+valCol+") VALUES (?, ?)", key, value)
+		_, err = kv.host.db.Exec("INSERT INTO " + kv.table + " (attr) VALUES ('\"" + key + "\"=>\"" + value + "\"')")
 		return err
 	} else {
 		// Key exists, update the value
-		_, err := kv.host.db.Exec("UPDATE "+kv.table+" SET "+valCol+" = ? WHERE "+keyCol+" = ?", value, key)
+		_, err := kv.host.db.Exec("UPDATE " + kv.table + " SET attr = attr || '\"" + key + "\"=>\"" + value + "\"' :: hstore")
 		return err
 	}
 }
 
 // Get a value given a key
 func (kv *KeyValue) Get(key string) (string, error) {
-	rows, err := kv.host.db.Query("SELECT "+valCol+" FROM "+kv.table+" WHERE "+keyCol+" = ?", key)
+	rows, err := kv.host.db.Query("SELECT attr -> '" + key + "' FROM " + kv.table)
 	if err != nil {
 		return "", err
 	}
@@ -716,7 +711,7 @@ func (kv *KeyValue) Inc(key string) (string, error) {
 	// See if we can fetch an existing value. NOTE: "== nil"
 	if val, err := kv.Get(key); err == nil {
 		// See if we can convert the value to a number. NOTE: "== nil"
-		if converted, err2 := strconv.Atoi(val); err2 == nil {
+		if converted, err_conv := strconv.Atoi(val); err_conv == nil {
 			num = converted
 		}
 	} else {
@@ -739,7 +734,7 @@ func (kv *KeyValue) Inc(key string) (string, error) {
 
 // Remove a key
 func (kv *KeyValue) Del(key string) error {
-	_, err := kv.host.db.Exec("DELETE FROM "+kv.table+" WHERE "+keyCol+" = ?", key)
+	_, err := kv.host.db.Exec("UPDATE " + kv.table + " SET attr = delete(attr, '" + key + "')")
 	return err
 }
 
