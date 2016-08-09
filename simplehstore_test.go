@@ -1,4 +1,4 @@
-package simplegres
+package simplehstore
 
 import (
 	"testing"
@@ -156,7 +156,6 @@ func TestRawSet(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
-	host.SetCompressUTF8(false)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()

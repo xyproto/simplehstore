@@ -1,5 +1,7 @@
-// Package simplegres offers a simple way to use a MySQL/MariaDB database.
-package simplegres
+// Package simplehstore offers a simple way to use a PostgreSQL database with HSTORE.
+// The database backend is interchangable with Redis (xyproto/simpleredis), BoltDB (xyproto/simplebolt) and
+// Mariadb/MyySQL (xyproto/simplemaria) since the xyproto/pinterface packages is used.
+package simplehstore
 
 import (
 	"database/sql"
@@ -18,9 +20,8 @@ const (
 )
 
 type Host struct {
-	db           *sql.DB
-	dbname       string
-	compressUTF8 bool
+	db     *sql.DB
+	dbname string
 }
 
 // Common for each of the db datastructures used here
@@ -39,9 +40,9 @@ type (
 const (
 
 	// The default "username:password@host:port/database" that the database is running at
-	defaultDatabaseServer = ""     // "username:password@server:port/"
+	defaultDatabaseServer = ""               // "username:password@server:port/"
 	defaultDatabaseName   = "travis_ci_test" // "main"
-	defaultStringLength   = 65535  // using VARCHAR
+	defaultStringLength   = 65535            // using VARCHAR
 	defaultPort           = 5432
 
 	encoding = "UTF8"
@@ -106,7 +107,7 @@ func NewHost(connectionString string) *Host {
 	if err != nil {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")
 	}
-	host := &Host{db, dbname, false}
+	host := &Host{db, dbname}
 	if err := host.Ping(); err != nil {
 		log.Fatalln("Host does not reply to ping: " + err.Error())
 	}
@@ -126,7 +127,7 @@ func NewHostWithDSN(connectionString string, dbname string) *Host {
 	if err != nil {
 		log.Fatalln("Could not connect to " + connectionString + "!")
 	}
-	host := &Host{db, dbname, false}
+	host := &Host{db, dbname}
 	if err := host.Ping(); err != nil {
 		log.Fatalln("Host does not reply to ping: " + err.Error())
 	}
@@ -148,11 +149,6 @@ func New() *Host {
 	return NewHost(connectionString)
 }
 
-// Should the UTF-8 data be hex encoded and compressed?
-func (h *Host) SetCompressUTF8(enabled bool) {
-	h.compressUTF8 = enabled
-}
-
 // Select a different database. Create the database if needed.
 func (host *Host) SelectDatabase(dbname string) error {
 	host.dbname = dbname
@@ -169,12 +165,14 @@ func (host *Host) SelectDatabase(dbname string) error {
 func (host *Host) createDatabase() error {
 	if _, err := host.db.Exec("CREATE DATABASE " + host.dbname + " WITH ENCODING '" + encoding + "'"); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
-			// Another error message
 			return err
 		}
 	}
-	if Verbose {
-		log.Println("Created database " + host.dbname)
+	// Ignore the error if hstore has already been enabled
+	if _, err := host.db.Exec("CREATE EXTENSION hstore"); err == nil {
+	    if Verbose {
+		    log.Println("Enabled HSTORE")
+	    }
 	}
 	return nil
 }
@@ -206,9 +204,7 @@ func (host *Host) Ping() error {
 // Create a new list. Lists are ordered.
 func NewList(host *Host, name string) (*List, error) {
 	l := &List{host, name}
-	// list is the name of the column
-	if _, err := l.host.db.Exec("CREATE TABLE " + name + " (id SERIAL PRIMARY KEY, " + listCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
-		// This is more likely to happen at the start of the program, hence the panic.
+	if _, err := l.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (id SERIAL PRIMARY KEY, " + listCol + " VARCHAR(" + strconv.Itoa(defaultStringLength) + "))"); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
 		}
@@ -221,11 +217,7 @@ func NewList(host *Host, name string) (*List, error) {
 
 // Add an element to the list
 func (l *List) Add(value string) error {
-	if l.host.compressUTF8 {
-		Encode(&value)
-	}
-	// list is the name of the column
-	_, err := l.host.db.Exec("INSERT INTO "+l.table+" ("+listCol+") VALUES (DEFAULT, " + value + ")")
+	_, err := l.host.db.Exec("INSERT INTO " + l.table + " (" + listCol + ") VALUES ('" + value + "')")
 	return err
 }
 
@@ -242,9 +234,6 @@ func (l *List) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		if l.host.compressUTF8 {
-			Decode(&value)
-		}
 		values = append(values, value)
 		if err != nil {
 			// Unusual, worthy of panic
@@ -280,9 +269,6 @@ func (l *List) GetLast() (string, error) {
 		// Unusual, worthy of panic
 		panic(err.Error())
 	}
-	if l.host.compressUTF8 {
-		Decode(&value)
-	}
 	return value, nil
 }
 
@@ -299,9 +285,6 @@ func (l *List) GetLastN(n int) ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		if l.host.compressUTF8 {
-			Decode(&value)
-		}
 		values = append(values, value)
 		if err != nil {
 			// Unusual, worthy of panic
@@ -352,23 +335,17 @@ func NewSet(host *Host, name string) (*Set, error) {
 // Add an element to the set
 func (s *Set) Add(value string) error {
 	originalValue := value
-	if s.host.compressUTF8 {
-		Encode(&value)
-	}
 	// Check if the value is not already there before adding
 	has, err := s.Has(originalValue)
 	if !has && (err == nil) {
-		_, err = s.host.db.Exec("INSERT INTO "+s.table+" ("+setCol+") VALUES (?)", value)
+		_, err = s.host.db.Exec("INSERT INTO " + s.table + " (" + setCol + ") VALUES ('" + value + "')")
 	}
 	return err
 }
 
 // Check if a given value is in the set
 func (s *Set) Has(value string) (bool, error) {
-	if s.host.compressUTF8 {
-		Encode(&value)
-	}
-	rows, err := s.host.db.Query("SELECT "+setCol+" FROM "+s.table+" WHERE "+setCol+" = ?", value)
+	rows, err := s.host.db.Query("SELECT "+setCol+" FROM "+s.table+" WHERE "+setCol+" = '" + value + "'")
 	if err != nil {
 		return false, err
 	}
@@ -407,9 +384,6 @@ func (s *Set) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
-		if s.host.compressUTF8 {
-			Decode(&value)
-		}
 		values = append(values, value)
 		if err != nil {
 			// Unusual, worthy of panic
@@ -425,11 +399,8 @@ func (s *Set) GetAll() ([]string, error) {
 
 // Remove an element from the set
 func (s *Set) Del(value string) error {
-	if s.host.compressUTF8 {
-		Encode(&value)
-	}
 	// Remove a value from the table
-	_, err := s.host.db.Exec("DELETE FROM "+s.table+" WHERE "+setCol+" = ?", value)
+	_, err := s.host.db.Exec("DELETE FROM "+s.table+" WHERE "+setCol+" = '" + value + "'")
 	return err
 }
 
@@ -468,9 +439,6 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
-	if h.host.compressUTF8 {
-		Encode(&value)
-	}
 	// See if the owner and key already exists
 	ok, err := h.Has(owner, key)
 	if err != nil {
@@ -517,9 +485,6 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	}
 	if counter == 0 {
 		return "", errors.New("No such owner/key: " + owner + "/" + key)
-	}
-	if h.host.compressUTF8 {
-		Decode(&value)
 	}
 	return value, nil
 }
@@ -662,9 +627,6 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 
 // Set a key and value
 func (kv *KeyValue) Set(key, value string) error {
-	if kv.host.compressUTF8 {
-		Encode(&value)
-	}
 	if _, err := kv.Get(key); err != nil {
 		// Key does not exist, create it
 		_, err = kv.host.db.Exec("INSERT INTO "+kv.table+" ("+keyCol+", "+valCol+") VALUES (?, ?)", key, value)
@@ -700,9 +662,6 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	}
 	if counter != 1 {
 		return "", errors.New("Wrong number of keys in KeyValue table: " + kv.table)
-	}
-	if kv.host.compressUTF8 {
-		Decode(&value)
 	}
 	return value, nil
 }

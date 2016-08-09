@@ -1,4 +1,4 @@
-package simplegres
+package simplehstore
 
 import (
 	"log"
