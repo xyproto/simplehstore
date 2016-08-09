@@ -50,8 +50,6 @@ const (
 	// Column names
 	listCol  = "a_list"
 	setCol   = "a_set"
-	keyCol   = "property"
-	valCol   = "value"
 	ownerCol = "owner"
 	kvCol    = "a_kv"
 )
@@ -425,14 +423,14 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 	h := &HashMap{host, name}
 	sqltype := "VARCHAR(" + strconv.Itoa(defaultStringLength) + ")"
 	// Using three columns: element id, key and value
-	query := fmt.Sprintf("CREATE TABLE %s (%s %s, %s %s, %s %s)", name, ownerCol, sqltype, keyCol, sqltype, valCol, sqltype)
+	query := fmt.Sprintf("CREATE TABLE %s (%s %s, attr hstore)", name, ownerCol, sqltype)
 	if _, err := h.host.db.Exec(query); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
 		}
 	}
 	if Verbose {
-		log.Println("Created table " + name + " in database " + host.dbname)
+		log.Println("Created HSTORE table " + name + " in database " + host.dbname)
 	}
 	return h, nil
 }
@@ -448,14 +446,14 @@ func (h *HashMap) Set(owner, key, value string) error {
 		log.Printf("%s/%s exists? %v\n", owner, key, ok)
 	}
 	if ok {
-		_, err = h.host.db.Exec("UPDATE "+h.table+" SET "+valCol+" = ? WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", value, owner, key)
+		_, err = h.host.db.Exec("UPDATE " + h.table + " SET attr = attr || '\"" + key + "\"=>\"" + value + "\"' :: hstore WHERE " + ownerCol + " = '" + owner + "'")
 		if Verbose {
-			log.Println("Updated the table: " + h.table)
+			log.Println("Updated HSTORE table: " + h.table)
 		}
 	} else {
-		_, err = h.host.db.Exec("INSERT INTO "+h.table+" ("+ownerCol+", "+keyCol+", "+valCol+") VALUES (?, ?, ?)", owner, key, value)
+		_, err = h.host.db.Exec("INSERT INTO " + h.table + " ("+ownerCol+", attr) VALUES ('" + owner + "', '\"" + key + "\"=>\"" + value + "\"')")
 		if Verbose {
-			log.Println("Added to the table: " + h.table)
+			log.Println("Added to HSTORE table: " + h.table)
 		}
 	}
 	return err
@@ -463,7 +461,7 @@ func (h *HashMap) Set(owner, key, value string) error {
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password").
 func (h *HashMap) Get(owner, key string) (string, error) {
-	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", owner, key)
+	rows, err := h.host.db.Query("SELECT attr -> '" + key + "' FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "'")
 	if err != nil {
 		return "", err
 	}
@@ -491,7 +489,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 
 // Check if a given owner + key is in the hash map
 func (h *HashMap) Has(owner, key string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", owner, key)
+	rows, err := h.host.db.Query("SELECT attr -> '" + key + "' FROM "+h.table+" WHERE "+ownerCol+" = '" + owner + "'")
 	if err != nil {
 		return false, err
 	}
@@ -519,7 +517,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 
 // Check if a given owner exists as a hash map at all
 func (h *HashMap) Exists(owner string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = ?", owner)
+	rows, err := h.host.db.Query("SELECT "+valCol+" FROM "+h.table+" WHERE "+ownerCol+" = '" + owner + "'")
 	if err != nil {
 		return false, err
 	}
@@ -542,7 +540,7 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 	return counter > 0, nil
 }
 
-// Get all owner's for all hash elements
+// Get all owners for all hash elements
 func (h *HashMap) GetAll() ([]string, error) {
 	rows, err := h.host.db.Query("SELECT " + ownerCol + " FROM " + h.table)
 	if err != nil {
@@ -571,14 +569,14 @@ func (h *HashMap) GetAll() ([]string, error) {
 // Remove a key for an entry in a hashmap (for instance the email field for a user)
 func (h *HashMap) DelKey(owner, key string) error {
 	// Remove a key from the hashmap
-	_, err := h.host.db.Exec("DELETE FROM "+h.table+" WHERE "+ownerCol+" = ? AND "+keyCol+" = ?", owner, key)
+	_, err := h.host.db.Exec("UPDATE " + h.table + " SET attr = delete(attr, '" + key + "') WHERE " + ownerCol + " = '" + owner + "'")
 	return err
 }
 
 // Remove an element (for instance a user)
 func (h *HashMap) Del(owner string) error {
 	// Remove an element id from the table
-	results, err := h.host.db.Exec("DELETE FROM "+h.table+" WHERE "+ownerCol+" = ?", owner)
+	results, err := h.host.db.Exec("DELETE FROM "+h.table+" WHERE "+ownerCol+" = '" + owner + "'")
 	if err != nil {
 		return err
 	}
@@ -607,6 +605,9 @@ func (h *HashMap) Clear() error {
 }
 
 /* --- KeyValue functions --- */
+
+var valCol = "OST"
+var keyCol = "KAKE"
 
 // Create a new key/value
 func NewKeyValue(host *Host, name string) (*KeyValue, error) {
