@@ -22,6 +22,7 @@ const (
 type Host struct {
 	db     *sql.DB
 	dbname string
+	rawUTF8 bool
 }
 
 // Common for each of the db datastructures used here
@@ -105,7 +106,7 @@ func NewHost(connectionString string) *Host {
 	if err != nil {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")
 	}
-	host := &Host{db, dbname}
+	host := &Host{db, dbname, false}
 	if err := host.Ping(); err != nil {
 		log.Fatalln("Host does not reply to ping: " + err.Error())
 	}
@@ -125,7 +126,7 @@ func NewHostWithDSN(connectionString string, dbname string) *Host {
 	if err != nil {
 		log.Fatalln("Could not connect to " + connectionString + "!")
 	}
-	host := &Host{db, dbname}
+	host := &Host{db, dbname, false}
 	if err := host.Ping(); err != nil {
 		log.Fatalln("Host does not reply to ping: " + err.Error())
 	}
@@ -215,6 +216,9 @@ func NewList(host *Host, name string) (*List, error) {
 
 // Add an element to the list
 func (l *List) Add(value string) error {
+	if !l.host.rawUTF8 {
+		Encode(&value)
+	}
 	_, err := l.host.db.Exec("INSERT INTO " + l.table + " (" + listCol + ") VALUES ('" + value + "')")
 	return err
 }
@@ -232,6 +236,9 @@ func (l *List) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
+		if !l.host.rawUTF8 {
+			Decode(&value)
+		}
 		values = append(values, value)
 		if err != nil {
 			// Unusual, worthy of panic
@@ -267,6 +274,9 @@ func (l *List) GetLast() (string, error) {
 		// Unusual, worthy of panic
 		panic(err.Error())
 	}
+	if !l.host.rawUTF8 {
+		Decode(&value)
+	}
 	return value, nil
 }
 
@@ -283,6 +293,9 @@ func (l *List) GetLastN(n int) ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
+		if !l.host.rawUTF8 {
+			Decode(&value)
+		}
 		values = append(values, value)
 		if err != nil {
 			// Unusual, worthy of panic
@@ -333,6 +346,9 @@ func NewSet(host *Host, name string) (*Set, error) {
 // Add an element to the set
 func (s *Set) Add(value string) error {
 	originalValue := value
+	if !s.host.rawUTF8 {
+		Encode(&value)
+	}
 	// Check if the value is not already there before adding
 	has, err := s.Has(originalValue)
 	if !has && (err == nil) {
@@ -343,6 +359,9 @@ func (s *Set) Add(value string) error {
 
 // Check if a given value is in the set
 func (s *Set) Has(value string) (bool, error) {
+	if !s.host.rawUTF8 {
+		Encode(&value)
+	}
 	rows, err := s.host.db.Query("SELECT "+setCol+" FROM "+s.table+" WHERE "+setCol+" = '" + value + "'")
 	if err != nil {
 		return false, err
@@ -382,6 +401,9 @@ func (s *Set) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
+		if !s.host.rawUTF8 {
+			Decode(&value)
+		}
 		values = append(values, value)
 		if err != nil {
 			// Unusual, worthy of panic
@@ -397,6 +419,9 @@ func (s *Set) GetAll() ([]string, error) {
 
 // Remove an element from the set
 func (s *Set) Del(value string) error {
+	if !s.host.rawUTF8 {
+		Encode(&value)
+	}
 	// Remove a value from the table
 	_, err := s.host.db.Exec("DELETE FROM "+s.table+" WHERE "+setCol+" = '" + value + "'")
 	return err
@@ -437,6 +462,9 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
+	if !h.host.rawUTF8 {
+		Encode(&value)
+	}
 	// See if the owner and key already exists
 	ok, err := h.Has(owner, key)
 	if err != nil {
@@ -483,6 +511,9 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	}
 	if counter == 0 {
 		return "", errors.New("No such owner/key: " + owner + "/" + key)
+	}
+	if !h.host.rawUTF8 {
+		Decode(&value)
 	}
 	return value, nil
 }
@@ -553,6 +584,9 @@ func (h *HashMap) GetAll() ([]string, error) {
 	)
 	for rows.Next() {
 		err = rows.Scan(&value)
+	    if !h.host.rawUTF8 {
+		    Decode(&value)
+	    }
 		values = append(values, value)
 		if err != nil {
 			// Unusual, worthy of panic
@@ -628,6 +662,9 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 
 // Set a key and value
 func (kv *KeyValue) Set(key, value string) error {
+	if !kv.host.rawUTF8 {
+		Encode(&value)
+	}
 	if _, err := kv.Get(key); err != nil {
 		// Key does not exist, create it
 		_, err = kv.host.db.Exec("INSERT INTO "+kv.table+" ("+keyCol+", "+valCol+") VALUES (?, ?)", key, value)
@@ -663,6 +700,9 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	}
 	if counter != 1 {
 		return "", errors.New("Wrong number of keys in KeyValue table: " + kv.table)
+	}
+	if !kv.host.rawUTF8 {
+		Decode(&value)
 	}
 	return value, nil
 }
