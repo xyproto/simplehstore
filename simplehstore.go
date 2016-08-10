@@ -100,9 +100,7 @@ func TestConnectionHostWithDSN(connectionString string) (err error) {
 // Create a new database connection.
 // connectionString may be on the form "username:password@host:port/database".
 func NewHost(connectionString string) *Host {
-
 	newConnectionString, dbname := rebuildConnectionString(connectionString)
-
 	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")
@@ -122,7 +120,6 @@ func NewHost(connectionString string) *Host {
 
 // Create a new database connection with a valid DSN.
 func NewHostWithDSN(connectionString string, dbname string) *Host {
-
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Fatalln("Could not connect to " + connectionString + "!")
@@ -349,7 +346,7 @@ func (s *Set) Add(value string) error {
 	if !s.host.rawUTF8 {
 		Encode(&value)
 	}
-	// Check if the value is not already there before adding
+	// Check that the value is not already there before adding
 	has, err := s.Has(originalValue)
 	if !has && (err == nil) {
 		_, err = s.host.db.Exec("INSERT INTO " + s.table + " (" + setCol + ") VALUES ('" + value + "')")
@@ -462,19 +459,19 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
-	if !h.host.rawUTF8 {
-		Encode(&value)
-	}
 	// See if the owner and key already exists
-	ok, err := h.Has(owner, key)
+	hasKey, err := h.Has(owner, key)
 	if err != nil {
 		return err
 	}
 	if Verbose {
-		log.Printf("%s/%s exists? %v\n", owner, key, ok)
+		log.Printf("%s/%s exists? %v\n", owner, key, hasKey)
 	}
-	if ok {
-		_, err = h.host.db.Exec("UPDATE " + h.table + " SET attr = attr || '\"" + key + "\"=>\"" + value + "\"' :: hstore WHERE " + ownerCol + " = '" + owner + "'")
+	if !h.host.rawUTF8 {
+		Encode(&value)
+	}
+	if hasKey {
+		_, err = h.host.db.Exec("UPDATE " + h.table + " SET attr = attr || '\"" + key + "\"=>\"" + value + "\"' :: hstore WHERE " + ownerCol + " = '" + owner + "' AND attr ? '" + key + "'")
 		if Verbose {
 			log.Println("Updated HSTORE table: " + h.table)
 		}
@@ -611,7 +608,7 @@ func (h *HashMap) GetAll() ([]string, error) {
 // Remove a key for an entry in a hashmap (for instance the email field for a user)
 func (h *HashMap) DelKey(owner, key string) error {
 	// Remove a key from the hashmap
-	_, err := h.host.db.Exec("UPDATE " + h.table + " SET attr = delete(attr, '" + key + "') WHERE " + ownerCol + " = '" + owner + "'")
+	_, err := h.host.db.Exec("UPDATE " + h.table + " SET attr = delete(attr, '" + key + "') WHERE " + ownerCol + " = '" + owner + "' AND attr ? '" + key + "'")
 	return err
 }
 
