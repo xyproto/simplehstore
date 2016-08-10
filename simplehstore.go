@@ -514,7 +514,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 
 // Check if a given owner + key is in the hash map
 func (h *HashMap) Has(owner, key string) (bool, error) {
-	rows, err := h.host.db.Query("SELECT attr -> '" + key + "' FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "'")
+	rows, err := h.host.db.Query("SELECT attr -> '" + key + "' FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "' AND attr ? '" + key + "'")
 	if err != nil {
 		return false, err
 	}
