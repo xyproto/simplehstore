@@ -386,7 +386,7 @@ func (s *Set) Has(value string) (bool, error) {
 	}
 	if counter > 1 {
 		// Should never happen
-		panic("Duplicate members in set! " + value)
+		return false, errors.New("Duplicate keys in set for value " + value + "!")
 	}
 	return counter > 0, nil
 }
@@ -546,7 +546,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 	}
 	if counter > 1 {
 		// Should never happen
-		panic("Duplicate keys in hash map! " + value)
+		return false, errors.New("Duplicate keys in hash map for owner " + owner + "!")
 	}
 	return counter > 0, nil
 }
