@@ -489,7 +489,7 @@ func (h *HashMap) Set(owner, key, value string) error {
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password").
 func (h *HashMap) Get(owner, key string) (string, error) {
-	rows, err := h.host.db.Query("SELECT attr -> '" + key + "' FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "'")
+	rows, err := h.host.db.Query("SELECT attr -> '" + key + "' FROM " + h.table + " WHERE " + ownerCol + " = '" + owner + "' AND attr ? '" + key + "'")
 	if err != nil {
 		return "", err
 	}
