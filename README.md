@@ -1,8 +1,8 @@
-simplegres
+simplehstore
 ===========
 
-[![Build Status](https://travis-ci.org/xyproto/simplegres.svg?branch=master)](https://travis-ci.org/xyproto/simplegres)
-[![GoDoc](https://godoc.org/github.com/xyproto/simplegres?status.svg)](http://godoc.org/github.com/xyproto/simplegres)
+[![Build Status](https://travis-ci.org/xyproto/simplehstore.svg?branch=master)](https://travis-ci.org/xyproto/simplehstore)
+[![GoDoc](https://godoc.org/github.com/xyproto/simplehstore?status.svg)](http://godoc.org/github.com/xyproto/simplehstore)
 
 
 Easy way to use a PostgreSQL database from Go.
@@ -11,7 +11,7 @@ Easy way to use a PostgreSQL database from Go.
 Online API Documentation
 ------------------------
 
-[godoc.org](http://godoc.org/github.com/xyproto/simplegres)
+[godoc.org](http://godoc.org/github.com/xyproto/simplehstore)
 
 
 Features and limitations
@@ -21,8 +21,9 @@ Features and limitations
 * Deals mainly with strings.
 * Uses the [pq](https://github.com/lib/pq) package.
 * Modeled after [simpleredis](https://github.com/xyproto/simpleredis).
-* The hash maps behaves like hash maps, but are not backed by actual hashmaps, unlike with [simpleredis](https://github.com/xyproto/simpleredis). This is for keeping compatibility with simpleredis. If performance when scaling up is a concern, simpleredis backed by [redis](https://redis.io) might be a better choice.
-
+* Uses the HSTORE for the KeyValue and HashMap types.
+* Uses regular SQL for the List and Set types.
+* If performance is a concern, simpleredis backed by [redis](https://redis.io) might be a better choice.
 
 Sample usage
 ------------
@@ -33,11 +34,11 @@ package main
 import (
 	"log"
 
-	"github.com/xyproto/simplegres"
+	db "github.com/xyproto/simplehstore"
 )
 
 func main() {
-	// Check if the simplegres service is up
+	// Check if the db service is up
 	if err := db.TestConnection(); err != nil {
 		log.Fatalln("Could not connect to local database. Is the service up and running?")
 	}
@@ -46,10 +47,10 @@ func main() {
 	host := db.New()
 
 	// Connecting to a different host/port
-	//host := db.NewHost("server:3306/db")
+	//host := db.NewHost("server:5432/db")
 
 	// Connect to a different db host/port, with a username and password
-	// host := db.NewHost("username:password@server:port/db")
+	// host := db.NewHost("username:password@server/db")
 
 	// Close the connection when the function returns
 	defer host.Close()
@@ -82,13 +83,14 @@ func main() {
 Testing
 -------
 
-A PostgreSQL Database must be up and running locally for `go test` to work.
+A PostgreSQL server must be up and running locally for `go test` to work.
 
 
-Version, license and author
+License, author and version
 ---------------------------
 
-* Version: 2.0
 * License: MIT
-* Author: Alexander F Rødseth
+* Author: Alexander F Rødseth <xyproto@archlinux.org>
+* Version: 2.0
+
 

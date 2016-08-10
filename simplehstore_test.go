@@ -299,6 +299,40 @@ func TestKeyValue(t *testing.T) {
 	var _ pinterface.IKeyValue = keyvalue
 }
 
+func TestHashKvMix(t *testing.T) {
+	Verbose = true
+
+	//host := New() // locally
+	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
+
+	defer host.Close()
+
+	sameName := "ostekake"
+
+	h, err := NewHashMap(host, sameName)
+	if err != nil {
+		t.Error(err)
+	}
+	h.Set("a", "b", "c")
+	defer h.Remove()
+
+	kv, err := NewKeyValue(host, sameName)
+	if err != nil {
+		t.Error(err)
+	}
+	kv.Remove()
+
+	v, err := h.Get("a", "b")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v != "c" {
+		t.Errorf("Error, hashmap table name collision")
+	}
+}
+
 func TestHashStorage(t *testing.T) {
 	Verbose = true
 

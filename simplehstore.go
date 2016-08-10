@@ -42,8 +42,8 @@ type (
 const (
 
 	// The default "username:password@host:port/database" that the database is running at
-	defaultDatabaseServer = ""               // "username:password@server:port/"
-	defaultDatabaseName   = "travis_ci_test" // "main"
+	defaultDatabaseServer = "postgres:@127.0.0.1/" // "username:password@server:port/"
+	defaultDatabaseName   = "test"                 // "main"
 	defaultStringType     = "TEXT"
 	defaultPort           = 5432
 
@@ -53,7 +53,7 @@ const (
 	listCol  = "a_list"
 	setCol   = "a_set"
 	ownerCol = "owner"
-	kvCol    = "a_kv"
+	kvPrefix = "a_kv_"
 )
 
 // Test if the local database server is up and running.
@@ -333,7 +333,7 @@ func (l *List) Clear() error {
 func NewSet(host *Host, name string) (*Set, error) {
 	s := &Set{host, name}
 	// list is the name of the column
-	if _, err := s.host.db.Exec("CREATE TABLE " + name + " (" + setCol + " " + defaultStringType + ")"); err != nil {
+	if _, err := s.host.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (" + setCol + " " + defaultStringType + ")"); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
 		}
@@ -448,7 +448,7 @@ func (s *Set) Clear() error {
 func NewHashMap(host *Host, name string) (*HashMap, error) {
 	h := &HashMap{host, name}
 	// Using three columns: element id, key and value
-	query := fmt.Sprintf("CREATE TABLE %s (%s %s, attr hstore)", name, ownerCol, defaultStringType)
+	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, attr hstore)", name, ownerCol, defaultStringType)
 	if _, err := h.host.db.Exec(query); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
@@ -643,7 +643,7 @@ func (h *HashMap) Clear() error {
 // Create a new key/value
 func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 	kv := &KeyValue{host, name}
-	query := fmt.Sprintf("CREATE TABLE %s (attr hstore)", name)
+	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s%s (attr hstore)", kvPrefix, name)
 	if _, err := kv.host.db.Exec(query); err != nil {
 		if !strings.HasSuffix(err.Error(), "already exists") {
 			return nil, err
@@ -662,18 +662,17 @@ func (kv *KeyValue) Set(key, value string) error {
 	}
 	if _, err := kv.Get(key); err != nil {
 		// Key does not exist, create it
-		_, err = kv.host.db.Exec("INSERT INTO " + kv.table + " (attr) VALUES ('\"" + key + "\"=>\"" + value + "\"')")
-		return err
-	} else {
-		// Key exists, update the value
-		_, err := kv.host.db.Exec("UPDATE " + kv.table + " SET attr = attr || '\"" + key + "\"=>\"" + value + "\"' :: hstore")
+		_, err = kv.host.db.Exec("INSERT INTO " + kvPrefix + kv.table + " (attr) VALUES ('\"" + key + "\"=>\"" + value + "\"')")
 		return err
 	}
+	// Key exists, update the value
+	_, err := kv.host.db.Exec("UPDATE " + kvPrefix + kv.table + " SET attr = attr || '\"" + key + "\"=>\"" + value + "\"' :: hstore")
+	return err
 }
 
 // Get a value given a key
 func (kv *KeyValue) Get(key string) (string, error) {
-	rows, err := kv.host.db.Query("SELECT attr -> '" + key + "' FROM " + kv.table)
+	rows, err := kv.host.db.Query("SELECT attr -> '" + key + "' FROM " + kvPrefix + kv.table)
 	if err != nil {
 		return "", err
 	}
@@ -694,7 +693,7 @@ func (kv *KeyValue) Get(key string) (string, error) {
 		panic(err.Error())
 	}
 	if counter != 1 {
-		return "", errors.New("Wrong number of keys in KeyValue table: " + kv.table)
+		return "", errors.New("Wrong number of keys in KeyValue table: " + kvPrefix + kv.table)
 	}
 	if !kv.host.rawUTF8 {
 		Decode(&value)
@@ -734,20 +733,20 @@ func (kv *KeyValue) Inc(key string) (string, error) {
 
 // Remove a key
 func (kv *KeyValue) Del(key string) error {
-	_, err := kv.host.db.Exec("UPDATE " + kv.table + " SET attr = delete(attr, '" + key + "')")
+	_, err := kv.host.db.Exec("UPDATE " + kvPrefix + kv.table + " SET attr = delete(attr, '" + key + "')")
 	return err
 }
 
 // Remove this key/value
 func (kv *KeyValue) Remove() error {
 	// Remove the table
-	_, err := kv.host.db.Exec("DROP TABLE " + kv.table)
+	_, err := kv.host.db.Exec("DROP TABLE " + kvPrefix + kv.table)
 	return err
 }
 
 // Clear this key/value
 func (kv *KeyValue) Clear() error {
 	// Remove the table
-	_, err := kv.host.db.Exec("TRUNCATE TABLE " + kv.table)
+	_, err := kv.host.db.Exec("TRUNCATE TABLE " + kvPrefix + kv.table)
 	return err
 }

@@ -3,29 +3,29 @@ package main
 import (
 	"log"
 
-	"github.com/xyproto/simplegres"
+	db "github.com/xyproto/simplehstore"
 )
 
 func main() {
-	// Check if the simplegres service is up
-	if err := simplegres.TestConnection(); err != nil {
+	// Check if the db service is up
+	if err := db.TestConnection(); err != nil {
 		log.Fatalln("Could not connect to local database. Is the service up and running?")
 	}
 
 	// Create a Host, connect to the local db server
-	host := simplegres.New()
+	host := db.New()
 
 	// Connecting to a different host/port
-	//host := simplegres.NewHost("server:3306/db")
+	//host := db.NewHost("server:5432/db")
 
 	// Connect to a different db host/port, with a username and password
-	// host := simplegres.NewHost("username:password@server/db")
+	// host := db.NewHost("username:password@server/db")
 
 	// Close the connection when the function returns
 	defer host.Close()
 
 	// Create a list named "greetings"
-	list, err := simplegres.NewList(host, "greetings")
+	list, err := db.NewList(host, "greetings")
 	if err != nil {
 		log.Fatalln("Could not create list!")
 	}
