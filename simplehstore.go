@@ -179,10 +179,6 @@ func (host *Host) createDatabase() error {
 
 // Use the host.dbname database
 func (host *Host) useDatabase() error {
-	// PostgreSQL is always using the database that was connected to
-	//if _, err := host.db.Exec("USE " + host.dbname); err != nil {
-	//	return err
-	//}
 	if Verbose {
 		log.Println("Using database " + host.dbname)
 	}
@@ -234,6 +230,9 @@ func (l *List) GetAll() ([]string, error) {
 	if err != nil {
 		return values, err
 	}
+	if rows == nil {
+		return values, errors.New("List GetAll returned no rows")
+	}
 	defer rows.Close()
 	for rows.Next() {
 		err = rows.Scan(&value)
@@ -259,6 +258,9 @@ func (l *List) GetLast() (string, error) {
 	rows, err := l.host.db.Query("SELECT " + listCol + " FROM " + l.table + " WHERE id = (SELECT MAX(id) FROM " + l.table + ")")
 	if err != nil {
 		return value, err
+	}
+	if rows == nil {
+		return value, errors.New("List GetLast returned no rows")
 	}
 	defer rows.Close()
 	// Get the value. Will only loop once.
@@ -286,6 +288,9 @@ func (l *List) GetLastN(n int) ([]string, error) {
 	rows, err := l.host.db.Query("SELECT " + listCol + " FROM (SELECT * FROM " + l.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
 	if err != nil {
 		return values, err
+	}
+	if rows == nil {
+		return values, errors.New("List GetLastN returned no rows for n " + strconv.Itoa(n))
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -360,6 +365,9 @@ func (s *Set) Has(value string) (bool, error) {
 	rows, err := s.host.db.Query("SELECT " + setCol + " FROM " + s.table + " WHERE " + setCol + " = '" + value + "'")
 	if err != nil {
 		return false, err
+	}
+	if rows == nil {
+		return false, errors.New("Set Has returned no rows for value " + value)
 	}
 	defer rows.Close()
 	var scanValue string
@@ -486,7 +494,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 		return "", err
 	}
 	if rows == nil {
-		return "", errors.New("No rows returned")
+		return "", errors.New("HashMap Get returned no rows for owner " + owner + " and key " + key)
 	}
 	defer rows.Close()
 	var value string
@@ -519,7 +527,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 		return false, err
 	}
 	if rows == nil {
-		return false, err
+		return false, errors.New("HashMap Has returned no rows for owner " + owner)
 	}
 	defer rows.Close()
 	var value string
@@ -550,7 +558,7 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 		return false, err
 	}
 	if rows == nil {
-		return false, err
+		return false, errors.New("HashMap Exists returned no rows for owner " + owner)
 	}
 	defer rows.Close()
 	var value string
@@ -579,6 +587,9 @@ func (h *HashMap) GetAll() ([]string, error) {
 	rows, err := h.host.db.Query("SELECT " + ownerCol + " FROM " + h.table)
 	if err != nil {
 		return values, err
+	}
+	if rows == nil {
+		return values, errors.New("HashMap GetAll returned no rows")
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -672,6 +683,9 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	rows, err := kv.host.db.Query("SELECT attr -> '" + key + "' FROM " + kvPrefix + kv.table)
 	if err != nil {
 		return "", err
+	}
+	if rows == nil {
+		return "", errors.New("KeyValue Get returned no rows for key " + key)
 	}
 	defer rows.Close()
 	var value string
