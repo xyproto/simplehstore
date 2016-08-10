@@ -1,7 +1,7 @@
 language: go
 
 addons:
-    - postgresql: "9.5"
+    - postgresql: "9.1"
 
 services:
     - postgresql
@@ -11,6 +11,3 @@ go:
     - 1.5
     - 1.6
     - tip
-
-#before_script:
-#    - psql -c 'CREATE DATABASE test; CREATE EXTENSION hstore;' -U postgres
