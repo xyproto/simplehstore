@@ -5,7 +5,7 @@ simplehstore
 [![GoDoc](https://godoc.org/github.com/xyproto/simplehstore?status.svg)](http://godoc.org/github.com/xyproto/simplehstore)
 
 
-Easy way to use a PostgreSQL database from Go.
+Easy way to use a PostgreSQL database (and the HSTORE feature) from Go.
 
 
 Online API Documentation
@@ -17,6 +17,7 @@ Online API Documentation
 Features and limitations
 ------------------------
 
+* Requires PostgreSQL 9.1 or later.
 * Supports simple use of lists, hashmaps, sets and key/values.
 * Deals mainly with strings.
 * Uses the [pq](https://github.com/lib/pq) package.
@@ -83,7 +84,7 @@ func main() {
 Testing
 -------
 
-A PostgreSQL server must be up and running locally for `go test` to work.
+* A PostgreSQL server must be up and running locally for `go test` to work.
 
 
 License, author and version
