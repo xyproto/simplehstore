@@ -426,6 +426,13 @@ func TestConfirmed(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	ok, err = users.Has("bob", "confirmed")
+	if err != nil {
+		t.Error(err)
+	}
+	if ok {
+		t.Error("The confirmed key should be gone")
+	}
 }
 
 func TestDupliSet(t *testing.T) {
