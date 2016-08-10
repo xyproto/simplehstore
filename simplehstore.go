@@ -524,6 +524,9 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if rows == nil {
+		return false, err
+	}
 	defer rows.Close()
 	var value string
 	// Get the value. Should only loop once.
@@ -531,8 +534,8 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			// No rows
+			return false, err
 		}
 		counter++
 	}
@@ -552,6 +555,9 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if rows == nil {
+		return false, err
+	}
 	defer rows.Close()
 	var value string
 	// Get the value. Should only loop once.
@@ -559,8 +565,8 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			// No rows
+			return false, err
 		}
 		counter++
 	}
