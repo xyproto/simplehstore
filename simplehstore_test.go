@@ -398,6 +398,25 @@ func TestTwoFields(t *testing.T) {
 	}
 }
 
+// Check that "bob" is confirmed
+func TestConfirmed(t *testing.T) {
+	host := NewHost("postgres:@127.0.0.1/")
+	defer host.Close()
+	users, err := NewHashMap(host, "users")
+	if err != nil {
+		t.Error(err)
+	}
+	defer users.Remove()
+	users.Set("bob", "confirmed", "true")
+	val, err := users.Get("bob", "confirmed")
+	if err != nil {
+		t.Error(err)
+	}
+	if val != "true" {
+		t.Error("bob should be confirmed")
+	}
+}
+
 func TestInc(t *testing.T) {
 	Verbose = true
 	const (
