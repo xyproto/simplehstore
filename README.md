@@ -23,9 +23,8 @@ Features and limitations
 * Deals mainly with strings.
 * Uses the [pq](https://github.com/lib/pq) package.
 * Modeled after [simpleredis](https://github.com/xyproto/simpleredis).
-* Uses the HSTORE for the KeyValue and HashMap types.
+* Uses SQL queries with HSTORE for the KeyValue and HashMap types.
 * Uses regular SQL for the List and Set types.
-* If performance is a concern, simpleredis backed by [redis](https://redis.io) might be a better choice.
 
 Sample usage
 ------------
