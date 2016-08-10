@@ -493,6 +493,9 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if rows == nil {
+		return "", errors.New("No rows returned")
+	}
 	defer rows.Close()
 	var value string
 	// Get the value. Should only loop once.
@@ -500,8 +503,8 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			// No rows
+			return "", err
 		}
 		counter++
 	}
