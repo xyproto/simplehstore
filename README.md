@@ -3,6 +3,7 @@ simplehstore
 
 [![Build Status](https://travis-ci.org/xyproto/simplehstore.svg?branch=master)](https://travis-ci.org/xyproto/simplehstore)
 [![GoDoc](https://godoc.org/github.com/xyproto/simplehstore?status.svg)](http://godoc.org/github.com/xyproto/simplehstore)
+[![Report Card](https://img.shields.io/badge/go_report-A+-brightgreen.svg?style=flat)](http://goreportcard.com/report/xyproto/simplehstore)
 
 
 Easy way to use a PostgreSQL database (and the HSTORE feature) from Go.

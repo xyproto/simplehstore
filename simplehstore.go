@@ -182,6 +182,10 @@ func (host *Host) useDatabase() error {
 	return nil
 }
 
+func (host *Host) Database() *sql.DB {
+	return host.db
+}
+
 // Close the connection
 func (host *Host) Close() {
 	host.db.Close()
