@@ -408,12 +408,23 @@ func TestConfirmed(t *testing.T) {
 	}
 	defer users.Remove()
 	users.Set("bob", "confirmed", "true")
+	ok, err := users.Exists("bob")
+	if err != nil {
+		t.Error(err)
+	}
+	if !ok {
+		t.Error("bob should exist!")
+	}
 	val, err := users.Get("bob", "confirmed")
 	if err != nil {
 		t.Error(err)
 	}
 	if val != "true" {
 		t.Error("bob should be confirmed")
+	}
+	err = users.DelKey("bob", "confirmed")
+	if err != nil {
+		t.Error(err)
 	}
 }
 
