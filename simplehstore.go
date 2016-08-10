@@ -1,5 +1,5 @@
 // Package simplehstore offers a simple way to use a PostgreSQL database with HSTORE.
-// The database backend is interchangable with Redis (xyproto/simpleredis), BoltDB (xyproto/simplebolt) and
+// The database backend is interchangeable with Redis (xyproto/simpleredis), BoltDB (xyproto/simplebolt) and
 // Mariadb/MyySQL (xyproto/simplemaria) since the xyproto/pinterface packages is used.
 package simplehstore
 
