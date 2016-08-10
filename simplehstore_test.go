@@ -203,7 +203,7 @@ func TestRawSet(t *testing.T) {
 	var _ pinterface.ISet = set
 }
 
-func TestHashMap(t *testing.T) {
+func TestHashMapUserState(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
@@ -218,46 +218,52 @@ func TestHashMap(t *testing.T) {
 	hashmap.Clear()
 
 	username := "bob"
-	key := "password"
-	value := "hunter1"
 
-	// Get key that doesn't exist yet
-	item, err := hashmap.Get("ownerblabla", "keyblabla")
-	if err == nil {
-		t.Errorf("Key found, when it should be missing! %s", err.Error())
+	err = hashmap.Set(username, "a", "true")
+	if err != nil {
+		t.Error(err)
 	}
-
-	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	err = hashmap.Set(username, "a", "false")
+	if err != nil {
+		t.Error(err)
 	}
-	// Once more, with the same data
-	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	aval, err := hashmap.Get(username, "a")
+	if err != nil {
+		t.Error(err)
 	}
-	items, err := hashmap.GetAll()
+	if aval != "false" {
+		t.Error("a should be false")
+	}
+	err = hashmap.Set(username, "a", "true")
+	if err != nil {
+		t.Error(err)
+	}
+	err = hashmap.Set(username, "b", "true")
+	if err != nil {
+		t.Error(err)
+	}
+	err = hashmap.Set(username, "b", "true")
+	if err != nil {
+		t.Error(err)
+	}
+	aval, err = hashmap.Get(username, "a")
+	if err != nil {
+		t.Errorf("Error when retrieving element! %s", err.Error())
+	}
+	if aval != "true" {
+		t.Error("a should be true")
+	}
+	bval, err := hashmap.Get(username, "b")
 	if err != nil {
 		t.Errorf("Error when retrieving elements! %s", err.Error())
 	}
-	if len(items) != 1 {
-		t.Errorf("Error, wrong element length! %v", len(items))
-	}
-	if (len(items) > 0) && (items[0] != username) {
-		t.Errorf("Error, wrong elementid! %v", items)
-	}
-	item, err = hashmap.Get(username, key)
-	if err != nil {
-		t.Errorf("Error, could not fetch value from hashmap! %s", err.Error())
-	}
-	if item != value {
-		t.Errorf("Error, expected %s, got %s!", value, item)
+	if bval != "true" {
+		t.Error("b should be true")
 	}
 	err = hashmap.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
 	}
-
-	// Check that hashmap qualifies for the IHashMap interface
-	var _ pinterface.IHashMap = hashmap
 }
 
 func TestKeyValue(t *testing.T) {
@@ -519,4 +525,92 @@ func TestInc(t *testing.T) {
 	if _, err := kv.Get(testkey); err == nil {
 		t.Errorf("Error, could get key! %s", err.Error())
 	}
+}
+
+func TestHashMapUserState2(t *testing.T) {
+	Verbose = true
+
+	//host := New() // locally
+	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
+
+	defer host.Close()
+	hashmap, err := NewHashMap(host, hashmapname)
+	if err != nil {
+		t.Error(err)
+	}
+	hashmap.Clear()
+
+	username := "bob"
+	key := "password"
+	value := "hunter1"
+
+	// Get key that doesn't exist yet
+	_, err = hashmap.Get("ownerblabla", "keyblabla")
+	if err == nil {
+		t.Errorf("Key found, when it should be missing! %s", err.Error())
+	}
+
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+
+	hashmap.Remove()
+}
+
+func TestHashMap(t *testing.T) {
+	Verbose = true
+
+	//host := New() // locally
+	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
+
+	defer host.Close()
+	hashmap, err := NewHashMap(host, hashmapname)
+	if err != nil {
+		t.Error(err)
+	}
+	hashmap.Clear()
+
+	username := "bob"
+	key := "password"
+	value := "hunter1"
+
+	// Get key that doesn't exist yet
+	item, err := hashmap.Get("ownerblabla", "keyblabla")
+	if err == nil {
+		t.Errorf("Key found, when it should be missing! %s", err.Error())
+	}
+
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+	// Once more, with the same data
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+	items, err := hashmap.GetAll()
+	if err != nil {
+		t.Errorf("Error when retrieving elements! %s", err.Error())
+	}
+	if len(items) != 1 {
+		t.Errorf("Error, wrong element length! %v", len(items))
+	}
+	if (len(items) > 0) && (items[0] != username) {
+		t.Errorf("Error, wrong elementid! %v", items)
+	}
+	item, err = hashmap.Get(username, key)
+	if err != nil {
+		t.Errorf("Error, could not fetch value from hashmap! %s", err.Error())
+	}
+	if item != value {
+		t.Errorf("Error, expected %s, got %s!", value, item)
+	}
+	err = hashmap.Remove()
+	if err != nil {
+		t.Errorf("Error, could not remove hashmap! %s", err.Error())
+	}
+
+	// Check that hashmap qualifies for the IHashMap interface
+	var _ pinterface.IHashMap = hashmap
 }
