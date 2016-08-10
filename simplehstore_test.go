@@ -417,6 +417,40 @@ func TestConfirmed(t *testing.T) {
 	}
 }
 
+func TestDupliSet(t *testing.T) {
+	host := NewHost("postgres:@127.0.0.1/")
+	defer host.Close()
+	letters, err := NewSet(host, "letters")
+	if err != nil {
+		t.Error(err)
+	}
+	defer letters.Remove()
+
+	if err := letters.Add("a"); err != nil {
+		t.Error(err)
+	}
+	if err := letters.Add("a"); err != nil {
+		t.Error(err)
+	}
+	x, err := letters.GetAll()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(x) != 1 {
+		t.Error("The set should have length 1 after adding two identical items")
+	}
+	if err := letters.Add("b"); err != nil {
+		t.Error(err)
+	}
+	y, err := letters.GetAll()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(y) != 2 {
+		t.Error("The set should have length 2 after adding two identical items")
+	}
+}
+
 func TestInc(t *testing.T) {
 	Verbose = true
 	const (

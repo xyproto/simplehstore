@@ -226,15 +226,15 @@ func (l *List) Add(value string) error {
 
 // Get all elements of a list
 func (l *List) GetAll() ([]string, error) {
-	rows, err := l.host.db.Query("SELECT " + listCol + " FROM " + l.table + " ORDER BY id")
-	if err != nil {
-		return []string{}, err
-	}
-	defer rows.Close()
 	var (
 		values []string
 		value  string
 	)
+	rows, err := l.host.db.Query("SELECT " + listCol + " FROM " + l.table + " ORDER BY id")
+	if err != nil {
+		return values, err
+	}
+	defer rows.Close()
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if !l.host.rawUTF8 {
@@ -242,38 +242,34 @@ func (l *List) GetAll() ([]string, error) {
 		}
 		values = append(values, value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			return values, err
 		}
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return values, err
 	}
 	return values, nil
 }
 
 // Get the last element of a list
 func (l *List) GetLast() (string, error) {
+	var value string
 	// Fetches the item with the largest id.
 	// Faster than "ORDER BY id DESC limit 1" for large tables.
 	rows, err := l.host.db.Query("SELECT " + listCol + " FROM " + l.table + " WHERE id = (SELECT MAX(id) FROM " + l.table + ")")
 	if err != nil {
-		return "", err
+		return value, err
 	}
 	defer rows.Close()
-	var value string
 	// Get the value. Will only loop once.
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			return value, err
 		}
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return value, err
 	}
 	if !l.host.rawUTF8 {
 		Decode(&value)
@@ -283,15 +279,15 @@ func (l *List) GetLast() (string, error) {
 
 // Get the last N elements of a list
 func (l *List) GetLastN(n int) ([]string, error) {
-	rows, err := l.host.db.Query("SELECT " + listCol + " FROM (SELECT * FROM " + l.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
-	if err != nil {
-		return []string{}, err
-	}
-	defer rows.Close()
 	var (
 		values []string
 		value  string
 	)
+	rows, err := l.host.db.Query("SELECT " + listCol + " FROM (SELECT * FROM " + l.table + " ORDER BY id DESC limit " + strconv.Itoa(n) + ")sub ORDER BY id ASC")
+	if err != nil {
+		return values, err
+	}
+	defer rows.Close()
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if !l.host.rawUTF8 {
@@ -299,16 +295,14 @@ func (l *List) GetLastN(n int) ([]string, error) {
 		}
 		values = append(values, value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			return values, err
 		}
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return values, err
 	}
 	if len(values) < n {
-		return []string{}, errors.New("Too few elements in table at GetLastN")
+		return values, errors.New("Too few elements in table at GetLastN")
 	}
 	return values, nil
 }
@@ -374,16 +368,16 @@ func (s *Set) Has(value string) (bool, error) {
 	for rows.Next() {
 		err = rows.Scan(&scanValue)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			// No rows
+			return false, err
 		}
 		counter++
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return false, err
 	}
 	if counter > 1 {
+		// Should never happen
 		panic("Duplicate members in set! " + value)
 	}
 	return counter > 0, nil
@@ -391,15 +385,15 @@ func (s *Set) Has(value string) (bool, error) {
 
 // Get all elements of the set
 func (s *Set) GetAll() ([]string, error) {
-	rows, err := s.host.db.Query("SELECT " + setCol + " FROM " + s.table)
-	if err != nil {
-		return []string{}, err
-	}
-	defer rows.Close()
 	var (
 		values []string
 		value  string
 	)
+	rows, err := s.host.db.Query("SELECT " + setCol + " FROM " + s.table)
+	if err != nil {
+		return values, err
+	}
+	defer rows.Close()
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if !s.host.rawUTF8 {
@@ -407,13 +401,11 @@ func (s *Set) GetAll() ([]string, error) {
 		}
 		values = append(values, value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			return values, err
 		}
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return values, err
 	}
 	return values, nil
 }
@@ -509,8 +501,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 		counter++
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return "", err
 	}
 	if counter == 0 {
 		return "", errors.New("No such owner/key: " + owner + "/" + key)
@@ -543,10 +534,10 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 		counter++
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return false, err
 	}
 	if counter > 1 {
+		// Should never happen
 		panic("Duplicate keys in hash map! " + value)
 	}
 	return counter > 0, nil
@@ -574,23 +565,22 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 		counter++
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return false, err
 	}
 	return counter > 0, nil
 }
 
 // Get all owners for all hash elements
 func (h *HashMap) GetAll() ([]string, error) {
-	rows, err := h.host.db.Query("SELECT " + ownerCol + " FROM " + h.table)
-	if err != nil {
-		return []string{}, err
-	}
-	defer rows.Close()
 	var (
 		values []string
 		value  string
 	)
+	rows, err := h.host.db.Query("SELECT " + ownerCol + " FROM " + h.table)
+	if err != nil {
+		return values, err
+	}
+	defer rows.Close()
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if !h.host.rawUTF8 {
@@ -598,13 +588,11 @@ func (h *HashMap) GetAll() ([]string, error) {
 		}
 		values = append(values, value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			return values, err
 		}
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return values, err
 	}
 	return values, nil
 }
@@ -692,14 +680,12 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
-			// Unusual, worthy of panic
-			panic(err.Error())
+			return "", err
 		}
 		counter++
 	}
 	if err := rows.Err(); err != nil {
-		// Unusual, worthy of panic
-		panic(err.Error())
+		return "", err
 	}
 	if counter != 1 {
 		return "", errors.New("Wrong number of keys in KeyValue table: " + kvPrefix + kv.table)

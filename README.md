@@ -14,12 +14,6 @@ Online API Documentation
 [godoc.org](http://godoc.org/github.com/xyproto/simplehstore)
 
 
-Known bugs
-----------
-
-* There are problems when using the HashMap. The test at [permissiongres](https://github.com/xyproto/permissiongres) currently fails.
-
-
 Features and limitations
 ------------------------
 
