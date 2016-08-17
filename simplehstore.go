@@ -716,9 +716,9 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	return value, nil
 }
 
-// Increase the value of a key, returns the new value
-// Returns an empty string if there were errors,
-// or "0" if the key does not already exist.
+// Inc increases rease the value of a key and returns the new value.
+// Stores "0" and returns "1" if no previous value is found.
+// Returns an empty string if there were errors.
 func (kv *KeyValue) Inc(key string) (string, error) {
 	// Retreieve the current value, if any
 	num := 0
