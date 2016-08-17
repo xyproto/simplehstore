@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Verbose can be set to true when testing for more information
 var Verbose = false
 
 /* --- Helper functions --- */

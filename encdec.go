@@ -7,9 +7,8 @@ import (
 	"io/ioutil"
 )
 
-// MariaDB/MySQL does not handle some characters well.
-// Compressing and hex encoding the value is one of many possible ways
-// to avoid this. Using BLOB fields and different datatypes is another.
+// Encode compresses and enocdes strings in order to safely handle *any* UTF-8 characters.
+// Using a binary datatype might also have worked.
 func Encode(value *string) error {
 	// Don't encode empty strings
 	if *value == "" {
@@ -26,7 +25,7 @@ func Encode(value *string) error {
 	return nil
 }
 
-// Dehex and decompress the given string
+// Decode decompresses and decodes strings.
 func Decode(code *string) error {
 	// Don't decode empty strings
 	if *code == "" {

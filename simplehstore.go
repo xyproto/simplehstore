@@ -146,6 +146,11 @@ func New() *Host {
 	return NewHost(connectionString)
 }
 
+// Should the UTF-8 data be raw, and not hex encoded and compressed?
+func (host *Host) SetRawUTF8(enabled bool) {
+	host.rawUTF8 = enabled
+}
+
 // Select a different database. Create the database if needed.
 func (host *Host) SelectDatabase(dbname string) error {
 	host.dbname = dbname
