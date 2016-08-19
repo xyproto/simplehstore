@@ -7,8 +7,7 @@ import (
 	"io/ioutil"
 )
 
-// Encode compresses and enocdes strings in order to safely handle *any* UTF-8 characters.
-// Using a binary datatype might also have worked.
+// Encode compresses and encodes a given string in order to safely handle *any* UTF-8 characters.
 func Encode(value *string) error {
 	// Don't encode empty strings
 	if *value == "" {
@@ -25,7 +24,7 @@ func Encode(value *string) error {
 	return nil
 }
 
-// Decode decompresses and decodes strings.
+// Decode decompresses and decodes an encoded string to an UTF-8 string.
 func Decode(code *string) error {
 	// Don't decode empty strings
 	if *code == "" {
