@@ -527,6 +527,31 @@ func TestInc(t *testing.T) {
 	}
 }
 
+func TestInc2(t *testing.T) {
+	Verbose = true
+	const (
+		kvname     = "kv_237_test_test_test_inc"
+		testkey    = "key_237_test_test_test_inc"
+		emptyvalue = "1"
+	)
+	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	defer host.Close()
+	kv, err := NewKeyValue(host, kvname)
+	if err != nil {
+		t.Error(err)
+	}
+
+	kv.Del(testkey)
+
+	if val, err := kv.Inc(testkey); err != nil {
+		t.Errorf("Error, could not get key! %s", err.Error())
+	} else if val != emptyvalue {
+		t.Errorf("Error, wrong value! %s != %s", val, emptyvalue)
+	}
+
+	kv.Remove()
+}
+
 func TestHashMapUserState2(t *testing.T) {
 	Verbose = true
 
