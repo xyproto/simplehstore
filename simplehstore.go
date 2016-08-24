@@ -1,6 +1,6 @@
 // Package simplehstore offers a simple way to use a PostgreSQL database with HSTORE.
 // The database backend is interchangeable with Redis (xyproto/simpleredis), BoltDB (xyproto/simplebolt) and
-// Mariadb/MyySQL (xyproto/simplemaria) since the xyproto/pinterface packages is used.
+// Mariadb/MySQL (xyproto/simplemaria) since the xyproto/pinterface packages is used.
 package simplehstore
 
 import (
@@ -20,13 +20,18 @@ const (
 	Version = 2.0
 )
 
+// Host represents a PostgreSQL database
 type Host struct {
-	db      *sql.DB
-	dbname  string
+	db     *sql.DB
+	dbname string
+
+	// If set to true, any UTF-8 string will be let through as it is.
+	// Some UTF-8 strings may be unpalatable for PostgreSQL when performing
+	// SQL queries. The default is "false".
 	rawUTF8 bool
 }
 
-// Common for each of the db datastructures used here
+// Common for each of the db data structures used here
 type dbDatastructure struct {
 	host  *Host
 	table string
@@ -79,7 +84,7 @@ func TestConnectionHost(connectionString string) (err error) {
 	return err
 }
 
-// Test if a given database server is up and running.
+// TestConnectionHostWithDSN checks if a given database server is up and running.
 func TestConnectionHostWithDSN(connectionString string) (err error) {
 	// Connect to the given host:port
 	db, err := sql.Open("postgres", connectionString)
@@ -97,7 +102,7 @@ func TestConnectionHostWithDSN(connectionString string) (err error) {
 
 /* --- Host functions --- */
 
-// Create a new database connection.
+// NewHost sets up a new database connection.
 // connectionString may be on the form "username:password@host:port/database".
 func NewHost(connectionString string) *Host {
 	newConnectionString, dbname := rebuildConnectionString(connectionString)
@@ -118,7 +123,7 @@ func NewHost(connectionString string) *Host {
 	return host
 }
 
-// Create a new database connection with a valid DSN.
+// NewHostWithDSN creates a new database connection with a valid DSN.
 func NewHostWithDSN(connectionString string, dbname string) *Host {
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
@@ -137,7 +142,7 @@ func NewHostWithDSN(connectionString string, dbname string) *Host {
 	return host
 }
 
-// The default database connection
+// New sets up a connection to the default (local) database host
 func New() *Host {
 	connectionString := defaultDatabaseServer + defaultDatabaseName
 	if !strings.HasSuffix(defaultDatabaseServer, "/") {
@@ -146,12 +151,16 @@ func New() *Host {
 	return NewHost(connectionString)
 }
 
-// Should the UTF-8 data be raw, and not hex encoded and compressed?
+// SetRawUTF8 can be used to select if the UTF-8 data be unprocessed, and not
+// hex encoded and compressed. Unprocessed UTF-8 may be slightly faster,
+// but malformed UTF-8 strings can potentially cause problems.
+// Encoding the strings before sending them to PostgreSQL is the default.
+// Choose the setting that best suits your situation.
 func (host *Host) SetRawUTF8(enabled bool) {
 	host.rawUTF8 = enabled
 }
 
-// Select a different database. Create the database if needed.
+// SelectDatabase sets a different database name and creates the database if needed.
 func (host *Host) SelectDatabase(dbname string) error {
 	host.dbname = dbname
 	if err := host.createDatabase(); err != nil {
@@ -170,7 +179,7 @@ func (host *Host) createDatabase() error {
 			return err
 		}
 	}
-	// Ignore the error if hstore has already been enabled
+	// Ignore the error if HSTORE has already been enabled
 	if _, err := host.db.Exec("CREATE EXTENSION hstore"); err == nil {
 		if Verbose {
 			log.Println("Enabled HSTORE")
@@ -716,10 +725,10 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	return value, nil
 }
 
-// Inc increases rease the value of a key and returns the new value.
+// Inc increases the value of a key and returns the new value.
 // Returns "1" if no previous value is found.
 func (kv *KeyValue) Inc(key string) (string, error) {
-	// Retreieve the current value, if any
+	// Retrieve the current value, if any
 	num := 0
 	// See if we can fetch an existing value. NOTE: "== nil"
 	if val, err := kv.Get(key); err == nil {
