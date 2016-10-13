@@ -639,3 +639,50 @@ func TestHashMap(t *testing.T) {
 	// Check that hashmap qualifies for the IHashMap interface
 	var _ pinterface.IHashMap = hashmap
 }
+
+func TestDashesAndQuotes(t *testing.T) {
+	Verbose = true
+
+	//host := New() // locally
+	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
+
+	defer host.Close()
+	hashmap, err := NewHashMap(host, hashmapname + "'s-")
+	if err != nil {
+		t.Error(err)
+	}
+	hashmap.Clear()
+
+	username := "bob's kitchen-machine"
+	key := "password"
+	value := "hunter's table-cloth"
+
+	// Get key that doesn't exist yet
+	item, err := hashmap.Get("ownerblabla", "keyblabla")
+	if err == nil {
+		t.Errorf("Key found, when it should be missing! %s", err.Error())
+	}
+
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+	// Once more, with the same data
+	if err := hashmap.Set(username, key, value); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+	if _, err := hashmap.GetAll(); err != nil {
+		t.Errorf("Error when retrieving elements! %s", err.Error())
+	}
+	item, err = hashmap.Get(username, key)
+	if err != nil {
+		t.Errorf("Error, could not fetch value from hashmap! %s", err.Error())
+	}
+	if item != value {
+		t.Errorf("Error, expected %s, got %s!", value, item)
+	}
+	err = hashmap.Remove()
+	if err != nil {
+		t.Errorf("Error, could not remove hashmap! %s", err.Error())
+	}
+}
