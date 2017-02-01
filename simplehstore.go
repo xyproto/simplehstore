@@ -72,6 +72,9 @@ func TestConnectionHost(connectionString string) (err error) {
 	newConnectionString, _ := rebuildConnectionString(connectionString)
 	// Connect to the given host:port
 	db, err := sql.Open("postgres", newConnectionString)
+	if err != nil {
+		return err
+	}
 	defer db.Close()
 	err = db.Ping()
 	if Verbose {
@@ -88,6 +91,9 @@ func TestConnectionHost(connectionString string) (err error) {
 func TestConnectionHostWithDSN(connectionString string) (err error) {
 	// Connect to the given host:port
 	db, err := sql.Open("postgres", connectionString)
+	if err != nil {
+		return err
+	}
 	defer db.Close()
 	err = db.Ping()
 	if Verbose {
@@ -269,10 +275,8 @@ func (l *List) GetAll() ([]string, error) {
 			return values, err
 		}
 	}
-	if err := rows.Err(); err != nil {
-		return values, err
-	}
-	return values, nil
+	err = rows.Err()
+	return values, err
 }
 
 // Get the last element of a list
@@ -437,10 +441,8 @@ func (s *Set) GetAll() ([]string, error) {
 			return values, err
 		}
 	}
-	if err := rows.Err(); err != nil {
-		return values, err
-	}
-	return values, nil
+	err = rows.Err()
+	return values, err
 }
 
 // Remove an element from the set
@@ -627,10 +629,8 @@ func (h *HashMap) GetAll() ([]string, error) {
 			return values, err
 		}
 	}
-	if err := rows.Err(); err != nil {
-		return values, err
-	}
-	return values, nil
+	err = rows.Err()
+	return values, err
 }
 
 // Remove a key for an entry in a hashmap (for instance the email field for a user)
