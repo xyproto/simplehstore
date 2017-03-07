@@ -20,6 +20,11 @@ const (
 	Version = 2.2
 )
 
+var (
+	ErrNoAvailableValues = errors.New("No available values")
+	ErrTooFewResults     = errors.New("Too few results")
+)
+
 // Host represents a PostgreSQL database
 type Host struct {
 	db     *sql.DB
@@ -61,12 +66,12 @@ const (
 	kvPrefix = "a_kv_"
 )
 
-// Test if the local database server is up and running.
+// TestConnection checks if the local database server is up and running
 func TestConnection() (err error) {
 	return TestConnectionHost(defaultDatabaseServer)
 }
 
-// Test if a given database server is up and running.
+// TestConnectionHost checks if a given database server is up and running.
 // connectionString may be on the form "username:password@host:port/database".
 func TestConnectionHost(connectionString string) (err error) {
 	newConnectionString, _ := rebuildConnectionString(connectionString)
@@ -228,7 +233,7 @@ func (host *Host) Ping() error {
 
 /* --- List functions --- */
 
-// Create a new list. Lists are ordered.
+// NewList creates a new List. Lists are ordered.
 func NewList(host *Host, name string) (*List, error) {
 	l := &List{host, pq.QuoteIdentifier(name)} // name is the name of the table
 	if _, err := l.host.db.Exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (id SERIAL PRIMARY KEY, %s %s)", l.table, listCol, defaultStringType)); err != nil {
@@ -251,7 +256,7 @@ func (l *List) Add(value string) error {
 	return err
 }
 
-// Get all elements of a list
+// GetAll retrieves all elements of a list
 func (l *List) GetAll() ([]string, error) {
 	var (
 		values []string
@@ -262,7 +267,7 @@ func (l *List) GetAll() ([]string, error) {
 		return values, err
 	}
 	if rows == nil {
-		return values, errors.New("List GetAll returned no rows")
+		return values, ErrNoAvailableValues
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -279,7 +284,7 @@ func (l *List) GetAll() ([]string, error) {
 	return values, err
 }
 
-// Get the last element of a list
+// GetLast retrieves the last element of a list
 func (l *List) GetLast() (string, error) {
 	var value string
 	// Fetches the item with the largest id.
@@ -289,7 +294,7 @@ func (l *List) GetLast() (string, error) {
 		return value, err
 	}
 	if rows == nil {
-		return value, errors.New("List GetLast returned no rows")
+		return value, ErrNoAvailableValues
 	}
 	defer rows.Close()
 	// Get the value. Will only loop once.
@@ -308,7 +313,9 @@ func (l *List) GetLast() (string, error) {
 	return value, nil
 }
 
-// Get the last N elements of a list
+// GetLastN retrieves the N last elements of a list. If there are too few
+// available elements, the values that were found are returned, together
+// with a TooFewElementsError.
 func (l *List) GetLastN(n int) ([]string, error) {
 	var (
 		values []string
@@ -319,7 +326,7 @@ func (l *List) GetLastN(n int) ([]string, error) {
 		return values, err
 	}
 	if rows == nil {
-		return values, errors.New("List GetLastN returned no rows for n " + strconv.Itoa(n))
+		return values, ErrNoAvailableValues
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -336,7 +343,7 @@ func (l *List) GetLastN(n int) ([]string, error) {
 		return values, err
 	}
 	if len(values) < n {
-		return values, errors.New("Too few elements in table at GetLastN")
+		return values, ErrTooFewResults
 	}
 	return values, nil
 }
@@ -471,7 +478,7 @@ func (s *Set) Clear() error {
 
 /* --- HashMap functions --- */
 
-// Create a new hashmap
+// NewHashMap creates a new HashMap struct
 func NewHashMap(host *Host, name string) (*HashMap, error) {
 	h := &HashMap{host, pq.QuoteIdentifier(name)}
 	// Using three columns: element id, key and value
@@ -616,7 +623,7 @@ func (h *HashMap) GetAll() ([]string, error) {
 		return values, err
 	}
 	if rows == nil {
-		return values, errors.New("HashMap GetAll returned no rows")
+		return values, ErrNoAvailableValues
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -673,7 +680,7 @@ func (h *HashMap) Clear() error {
 
 /* --- KeyValue functions --- */
 
-// Create a new key/value
+// NewKeyValue creates a new KeyValue struct, for storing key/value pairs.
 func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 	kv := &KeyValue{host, name}
 	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (attr hstore)", pq.QuoteIdentifier(kvPrefix+kv.table))

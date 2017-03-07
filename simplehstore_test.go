@@ -659,7 +659,7 @@ func TestDashesAndQuotes(t *testing.T) {
 	value := "hunter's table-cloth"
 
 	// Get key that doesn't exist yet
-	item, err := hashmap.Get("ownerblabla", "keyblabla")
+	_, err = hashmap.Get("ownerblabla", "keyblabla")
 	if err == nil {
 		t.Errorf("Key found, when it should be missing! %s", err.Error())
 	}
@@ -674,7 +674,7 @@ func TestDashesAndQuotes(t *testing.T) {
 	if _, err := hashmap.GetAll(); err != nil {
 		t.Errorf("Error when retrieving elements! %s", err.Error())
 	}
-	item, err = hashmap.Get(username, key)
+	item, err := hashmap.Get(username, key)
 	if err != nil {
 		t.Errorf("Error, could not fetch value from hashmap! %s", err.Error())
 	}
