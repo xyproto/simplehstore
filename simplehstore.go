@@ -208,10 +208,7 @@ func (host *Host) SelectDatabase(dbname string) error {
 	if err := host.createDatabase(); err != nil {
 		return err
 	}
-	if err := host.useDatabase(); err != nil {
-		return err
-	}
-	return nil
+	return host.useDatabase()
 }
 
 // Will create the database if it does not already exist

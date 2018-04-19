@@ -34,14 +34,12 @@ func TestLocalConnection(t *testing.T) {
 	}
 }
 
-func TestList(t *testing.T) {
-	Verbose = true
-
+func TestList1(t *testing.T) {
 	//host := New() // locally
 	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
 	//host := NewHost("go:go@/main") // laptop
-
 	defer host.Close()
+
 	list, err := NewList(host, listname)
 	if err != nil {
 		t.Error(err)
@@ -73,22 +71,43 @@ func TestList(t *testing.T) {
 	if len(items) != 3 {
 		t.Errorf("Error, wrong list length! %v", len(items))
 	}
+	err = list.Remove()
+	if err != nil {
+		t.Errorf("Error, could not remove list! %s", err.Error())
+	}
+}
+
+func TestList2(t *testing.T) {
+	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	defer host.Close()
+
+	list, err := NewList(host, listname)
+	if err != nil {
+		t.Error(err)
+	}
+	list.Clear()
+	if err := list.Add(testdata1); err != nil {
+		t.Errorf("Error, could not add item to list! %s", err.Error())
+	}
+	if err := list.Add(testdata2); err != nil {
+		t.Errorf("Error, could not add item to list! %s", err.Error())
+	}
 	item, err := list.GetLast()
 	if err != nil {
 		t.Errorf("Error, could not get last item from list! %s", err.Error())
 	}
-	if item != testdata3 {
-		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata3, item)
+	if item != testdata2 {
+		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata2, item)
 	}
-	items, err = list.GetLastN(2)
+	items, err := list.GetLastN(2)
 	if err != nil {
 		t.Errorf("Error, could not get last N items from list! %s", err.Error())
 	}
 	if len(items) != 2 {
 		t.Errorf("Error, wrong list length! %v", len(items))
 	}
-	if items[0] != testdata2 {
-		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata2, items[0])
+	if items[0] != testdata1 {
+		t.Errorf("Error, expected %s, got %s with GetLastN(2)[0]!", testdata1, items[0])
 	}
 	err = list.Remove()
 	if err != nil {
