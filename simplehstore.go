@@ -94,8 +94,9 @@ func TestConnection() (err error) {
 
 // TestConnectionHost checks if a given database server is up and running.
 // connectionString may be on the form "username:password@host:port/database".
+// The database name is ignored.
 func TestConnectionHost(connectionString string) (err error) {
-	newConnectionString, _ := rebuildConnectionString(connectionString)
+	newConnectionString, _ := rebuildConnectionString(connectionString, false)
 	// Connect to the given host:port
 	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
@@ -147,7 +148,7 @@ func escape(s string) string {
 // NewHost sets up a new database connection.
 // connectionString may be on the form "username:password@host:port/database".
 func NewHost(connectionString string) *Host {
-	newConnectionString, dbname := rebuildConnectionString(connectionString)
+	newConnectionString, dbname := rebuildConnectionString(connectionString, true)
 	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")

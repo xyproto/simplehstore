@@ -108,7 +108,6 @@ func splitConnectionString(connectionString string) (username, password string, 
 }
 
 // Build a DSN.
-// TODO: Check if this can be removed
 func buildConnectionString(username, password string, hasPassword bool, host, port, dbname, args string) string {
 	// Build a new connection string
 	var buf bytes.Buffer
@@ -148,8 +147,11 @@ func buildConnectionString(username, password string, hasPassword bool, host, po
 }
 
 // Take apart and rebuild the connection string. Also extract and return the dbname.
-// TODO: Check if the use of buildconnectionString can be removed
-func rebuildConnectionString(connectionString string) (string, string) {
+// withoutDB is for pinging database hosts without opening a specific database.
+func rebuildConnectionString(connectionString string, withDB bool) (string, string) {
 	username, password, hasPassword, hostname, port, dbname, args := splitConnectionString(connectionString)
-	return buildConnectionString(username, password, hasPassword, hostname, port, dbname, args), dbname
+	if withDB {
+		return buildConnectionString(username, password, hasPassword, hostname, port, dbname, args), dbname
+	}
+	return buildConnectionString(username, password, hasPassword, hostname, port, "", args), ""
 }
