@@ -1,5 +1,5 @@
 // Package simplehstore offers a simple way to use a PostgreSQL database with HSTORE.
-// The database backend is interchangeable with Redis (xyproto/simpleredis), BoltDB (xyproto/simplebolt) and
+// The database back end is interchangeable with Redis (xyproto/simpleredis), BoltDB (xyproto/simplebolt) and
 // Mariadb/MySQL (xyproto/simplemaria) by using the interfaces in the xyproto/pinterface package.
 package simplehstore
 
@@ -95,7 +95,7 @@ func TestConnection() (err error) {
 // TestConnectionHost checks if a given database server is up and running.
 // connectionString may be on the form "username:password@host:port/database".
 func TestConnectionHost(connectionString string) (err error) {
-	newConnectionString, _ := examineConnectionString(connectionString)
+	newConnectionString, _ := rebuildConnectionString(connectionString)
 	// Connect to the given host:port
 	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
@@ -147,7 +147,7 @@ func escape(s string) string {
 // NewHost sets up a new database connection.
 // connectionString may be on the form "username:password@host:port/database".
 func NewHost(connectionString string) *Host {
-	newConnectionString, dbname := examineConnectionString(connectionString)
+	newConnectionString, dbname := rebuildConnectionString(connectionString)
 	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")

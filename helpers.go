@@ -42,17 +42,14 @@ func rightOf(s, delim string) string {
 }
 
 // Parse a DSN
-func splitConnectionString(connectionString string) (string, string, bool, string, string, string) {
-	var (
-		userPass, hostPortDatabase, dbname, hostPort,
-		password, username, port, host string
-		hasPassword bool
-	)
+func splitConnectionString(connectionString string) (username, password string, hasPassword bool, host, port, dbname, args string) {
+
+	var hostPortDatabase, hostPort string
 
 	// Gather the fields
 
 	// Optional left side of @ with username and password
-	userPass = leftOf(connectionString, "@")
+	userPass := leftOf(connectionString, "@")
 	if userPass != "" {
 		hostPortDatabase = rightOf(connectionString, "@")
 	} else {
@@ -89,6 +86,13 @@ func splitConnectionString(connectionString string) (string, string, bool, strin
 		}
 	}
 
+	if strings.Contains(dbname, "?") && strings.Contains(dbname, "=") {
+		args = rightOf(dbname, "?")
+		if args != "" {
+			dbname = leftOf(dbname, "?")
+		}
+	}
+
 	if Verbose {
 		log.Println("Connection:")
 		log.Println("\tusername:\t", username)
@@ -97,18 +101,22 @@ func splitConnectionString(connectionString string) (string, string, bool, strin
 		log.Println("\thost:\t\t", host)
 		log.Println("\tport:\t\t", port)
 		log.Println("\tdbname:\t\t", dbname)
+		log.Println("\targs:\t\t", args)
 		log.Println()
 	}
 
-	return username, password, hasPassword, host, port, dbname
+	return
 }
 
-// Build an URL
-func buildConnectionString(username, password string, hasPassword bool, host, port, dbname string) string {
+// Build a DSN.
+// TODO: Check if this can be removed
+func buildConnectionString(username, password string, hasPassword bool, host, port, dbname, args string) string {
 	// Build a new connection string
 	var buf bytes.Buffer
 
-	buf.WriteString("postgres://")
+	if !strings.HasPrefix(username, "postgres://") {
+		buf.WriteString("postgres://")
+	}
 
 	if (username != "") && hasPassword {
 		buf.WriteString(username + ":" + password + "@")
@@ -125,7 +133,13 @@ func buildConnectionString(username, password string, hasPassword bool, host, po
 		buf.WriteString(":" + port)
 	}
 
-	buf.WriteString("/?sslmode=disable")
+	buf.WriteString("/" + dbname)
+
+	if args != "" {
+		buf.WriteString("?" + args)
+	} else {
+		buf.WriteString("?sslmode=disable")
+	}
 
 	if Verbose {
 		log.Println("Connection string:", buf.String())
@@ -134,8 +148,9 @@ func buildConnectionString(username, password string, hasPassword bool, host, po
 	return buf.String()
 }
 
-// Take apart and rebuild the connection string, as a sanity check. Also extract and return the dbname.
-func examineConnectionString(connectionString string) (string, string) {
-	username, password, hasPassword, hostname, port, dbname := splitConnectionString(connectionString)
-	return buildConnectionString(username, password, hasPassword, hostname, port, dbname), dbname
+// Take apart and rebuild the connection string. Also extract and return the dbname.
+// TODO: Check if the use of buildconnectionString can be removed
+func rebuildConnectionString(connectionString string) (string, string) {
+	username, password, hasPassword, hostname, port, dbname, args := splitConnectionString(connectionString)
+	return buildConnectionString(username, password, hasPassword, hostname, port, dbname, args), dbname
 }
