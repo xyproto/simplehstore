@@ -1,6 +1,6 @@
 // Package simplehstore offers a simple way to use a PostgreSQL database with HSTORE.
 // The database backend is interchangeable with Redis (xyproto/simpleredis), BoltDB (xyproto/simplebolt) and
-// Mariadb/MySQL (xyproto/simplemaria) since the xyproto/pinterface packages is used.
+// Mariadb/MySQL (xyproto/simplemaria) by using the interfaces in the xyproto/pinterface package.
 package simplehstore
 
 import (
@@ -21,8 +21,11 @@ const (
 )
 
 var (
-	ErrNoAvailableValues = errors.New("No available values")
-	ErrTooFewResults     = errors.New("Too few results")
+	// ErrNoAvailableValues is used as an error if an SQL query returns no values
+	ErrNoAvailableValues = errors.New("no available values")
+
+	// ErrTooFewResults is used as an error if an SQL query returns too few results
+	ErrTooFewResults = errors.New("too few results")
 )
 
 // Host represents a PostgreSQL database
@@ -43,14 +46,21 @@ type dbDatastructure struct {
 }
 
 type (
-	List     dbDatastructure
-	Set      dbDatastructure
-	HashMap  dbDatastructure
+	// List is a list of strings, stored in PostgreSQL
+	List dbDatastructure
+
+	// Set is a set of strings, stored in PostgreSQL
+	Set dbDatastructure
+
+	// HashMap is a hash map with a name, key and value, stored in PostgreSQL
+	// Useful when storing several keys and values for a specific username, for instance.
+	HashMap dbDatastructure
+
+	// KeyValue is a hash map with a key and a value, stored in PostgreSQL
 	KeyValue dbDatastructure
 )
 
 const (
-
 	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = "postgres:@127.0.0.1/" // "username:password@server:port/"
 	defaultDatabaseName   = "test"                 // "main"
@@ -58,13 +68,24 @@ const (
 	defaultPort           = 5432
 
 	encoding = "UTF8"
+)
 
+var (
 	// Column names
 	listCol  = "a_list"
 	setCol   = "a_set"
 	ownerCol = "owner"
 	kvPrefix = "a_kv_"
 )
+
+// SetColumnNames can be used to change the column names and prefixes that are used in the PostgreSQL tables.
+// The default values are: "a_list", "a_set", "owner" and "a_kv_".
+func SetColumnNames(list, set, hashMapOwner, keyValuePrefix string) {
+	listCol = list
+	setCol = set
+	ownerCol = hashMapOwner
+	kvPrefix = keyValuePrefix
+}
 
 // TestConnection checks if the local database server is up and running
 func TestConnection() (err error) {
@@ -74,7 +95,7 @@ func TestConnection() (err error) {
 // TestConnectionHost checks if a given database server is up and running.
 // connectionString may be on the form "username:password@host:port/database".
 func TestConnectionHost(connectionString string) (err error) {
-	newConnectionString, _ := rebuildConnectionString(connectionString)
+	newConnectionString, _ := examineConnectionString(connectionString)
 	// Connect to the given host:port
 	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
@@ -126,7 +147,7 @@ func escape(s string) string {
 // NewHost sets up a new database connection.
 // connectionString may be on the form "username:password@host:port/database".
 func NewHost(connectionString string) *Host {
-	newConnectionString, dbname := rebuildConnectionString(connectionString)
+	newConnectionString, dbname := examineConnectionString(connectionString)
 	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
 		log.Fatalln("Could not connect to " + newConnectionString + "!")
@@ -217,6 +238,7 @@ func (host *Host) useDatabase() error {
 	return nil
 }
 
+// Database returns the underlying *sql.DB database struct
 func (host *Host) Database() *sql.DB {
 	return host.db
 }
@@ -364,7 +386,7 @@ func (l *List) Clear() error {
 
 /* --- Set functions --- */
 
-// Create a new set
+// NewSet creates a new set
 func NewSet(host *Host, name string) (*Set, error) {
 	s := &Set{host, pq.QuoteIdentifier(name)} // name is the name of the table
 	// list is the name of the column
@@ -393,7 +415,7 @@ func (s *Set) Add(value string) error {
 	return err
 }
 
-// Check if a given value is in the set
+// Has checks if the given value is in the set
 func (s *Set) Has(value string) (bool, error) {
 	if !s.host.rawUTF8 {
 		Encode(&value)
@@ -427,7 +449,7 @@ func (s *Set) Has(value string) (bool, error) {
 	return counter > 0, nil
 }
 
-// Get all elements of the set
+// GetAll returns all elements in the set
 func (s *Set) GetAll() ([]string, error) {
 	var (
 		values []string
@@ -452,7 +474,7 @@ func (s *Set) GetAll() ([]string, error) {
 	return values, err
 }
 
-// Remove an element from the set
+// Del removes an element from the set
 func (s *Set) Del(value string) error {
 	if !s.host.rawUTF8 {
 		Encode(&value)
@@ -554,7 +576,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	return value, nil
 }
 
-// Check if a given owner + key is in the hash map
+// Has checks if a given owner + key exists in the hash map
 func (h *HashMap) Has(owner, key string) (bool, error) {
 	rows, err := h.host.db.Query(fmt.Sprintf("SELECT attr -> %s FROM %s WHERE %s = %s AND attr ? %s", singleQuote(key), h.table, ownerCol, singleQuote(owner), singleQuote(key)))
 	if err != nil {
@@ -585,7 +607,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 	return counter > 0, nil
 }
 
-// Check if a given owner exists as a hash map at all
+// Exists checks if a given owner exists as a hash map at all
 func (h *HashMap) Exists(owner string) (bool, error) {
 	rows, err := h.host.db.Query(fmt.Sprintf("SELECT attr FROM %s WHERE %s = %s", h.table, ownerCol, singleQuote(owner)))
 	if err != nil {
@@ -612,7 +634,7 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 	return counter > 0, nil
 }
 
-// Get all owners for all hash elements
+// GetAll returns all owners for all hash map elements
 func (h *HashMap) GetAll() ([]string, error) {
 	var (
 		values []string
@@ -640,14 +662,14 @@ func (h *HashMap) GetAll() ([]string, error) {
 	return values, err
 }
 
-// Remove a key for an entry in a hashmap (for instance the email field for a user)
+// DelKey removes a key of an owner in a hashmap (for instance the email field for a user)
 func (h *HashMap) DelKey(owner, key string) error {
 	// Remove a key from the hashmap
 	_, err := h.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = delete(attr, %s) WHERE %s = %s AND attr ? %s", h.table, singleQuote(key), ownerCol, singleQuote(owner), singleQuote(key)))
 	return err
 }
 
-// Remove an element (for instance a user)
+// Del removes an element (for instance a user)
 func (h *HashMap) Del(owner string) error {
 	// Remove an element id from the table
 	results, err := h.host.db.Exec(fmt.Sprintf("DELETE FROM %s WHERE %s = %s", h.table, ownerCol, singleQuote(owner)))
@@ -771,7 +793,7 @@ func (kv *KeyValue) Inc(key string) (string, error) {
 	return val, nil
 }
 
-// Remove a key
+// Del removes the given key
 func (kv *KeyValue) Del(key string) error {
 	_, err := kv.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = delete(attr, %s)", pq.QuoteIdentifier(kvPrefix+kv.table), singleQuote(key)))
 	return err

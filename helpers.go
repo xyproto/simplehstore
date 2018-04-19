@@ -1,18 +1,22 @@
 package simplehstore
 
 import (
+	"bytes"
 	"log"
 	"strconv"
 	"strings"
 )
 
-// Verbose can be set to true when testing for more information
-var Verbose = false
+// Verbose can be set to true when testing, for more information
+var (
+	Verbose = false
+)
 
 /* --- Helper functions --- */
 
-// Split a string into two parts, given a delimiter.
-// Returns the two parts and true if it works out.
+// twoFields splits a string into two parts, given a delimiter.
+// If it works out, the two parts are returned, together with "true".
+// The delimiter must exist exactly once.
 func twoFields(s, delim string) (string, string, bool) {
 	if strings.Count(s, delim) != 1 {
 		return s, "", false
@@ -21,6 +25,7 @@ func twoFields(s, delim string) (string, string, bool) {
 	return fields[0], fields[1], true
 }
 
+// leftOf returns the string to the left of the given delimiter
 func leftOf(s, delim string) string {
 	if left, _, ok := twoFields(s, delim); ok {
 		return strings.TrimSpace(left)
@@ -28,6 +33,7 @@ func leftOf(s, delim string) string {
 	return ""
 }
 
+// rightOf returns the string to the right of the given delimiter
 func rightOf(s, delim string) string {
 	if _, right, ok := twoFields(s, delim); ok {
 		return strings.TrimSpace(right)
@@ -38,9 +44,9 @@ func rightOf(s, delim string) string {
 // Parse a DSN
 func splitConnectionString(connectionString string) (string, string, bool, string, string, string) {
 	var (
-		userPass, hostPortDatabase, dbname       string
-		hostPort, password, username, port, host string
-		hasPassword                              bool
+		userPass, hostPortDatabase, dbname, hostPort,
+		password, username, port, host string
+		hasPassword bool
 	)
 
 	// Gather the fields
@@ -50,22 +56,14 @@ func splitConnectionString(connectionString string) (string, string, bool, strin
 	if userPass != "" {
 		hostPortDatabase = rightOf(connectionString, "@")
 	} else {
-		if strings.HasSuffix(connectionString, "@") {
-			hostPortDatabase = connectionString[:len(connectionString)-1]
-		} else {
-			hostPortDatabase = connectionString
-		}
+		hostPortDatabase = strings.TrimRight(connectionString, "@")
 	}
 	// Optional right side of / with database name
 	dbname = rightOf(hostPortDatabase, "/")
 	if dbname != "" {
 		hostPort = leftOf(hostPortDatabase, "/")
 	} else {
-		if strings.HasSuffix(hostPortDatabase, "/") {
-			hostPort = hostPortDatabase[:len(hostPortDatabase)-1]
-		} else {
-			hostPort = hostPortDatabase
-		}
+		hostPort = strings.TrimRight(connectionString, "/")
 		dbname = defaultDatabaseName
 	}
 	// Optional right side of : with password
@@ -85,11 +83,7 @@ func splitConnectionString(connectionString string) (string, string, bool, strin
 	if port != "" {
 		host = leftOf(hostPort, ":")
 	} else {
-		if strings.HasSuffix(hostPort, ":") {
-			host = hostPort[:len(hostPort)-1]
-		} else {
-			host = hostPort
-		}
+		host = strings.TrimRight(hostPort, ":")
 		if host != "" {
 			port = strconv.Itoa(defaultPort)
 		}
@@ -111,40 +105,37 @@ func splitConnectionString(connectionString string) (string, string, bool, strin
 
 // Build an URL
 func buildConnectionString(username, password string, hasPassword bool, host, port, dbname string) string {
+	// Build a new connection string
+	var buf bytes.Buffer
 
-	// Build the new connection string
+	buf.WriteString("postgres://")
 
-	var newConnectionString string
-	if (host != "") && (port != "") {
-		newConnectionString += host + ":" + port
-	} else if host != "" {
-		newConnectionString += host
-	} else if port != "" {
-		newConnectionString += ":" + port
-		log.Fatalln("There is only a port. This should not happen.")
-	}
 	if (username != "") && hasPassword {
-		newConnectionString = username + ":" + password + "@" + newConnectionString
+		buf.WriteString(username + ":" + password + "@")
 	} else if username != "" {
-		newConnectionString = username + "@" + newConnectionString
+		buf.WriteString(username + "@")
 	} else if hasPassword {
-		newConnectionString = ":" + password + "@" + newConnectionString
+		buf.WriteString(":" + password + "@")
 	}
-	newConnectionString += "/"
 
-	newConnectionString = "postgres://" + newConnectionString
+	if host != "" {
+		buf.WriteString(host)
+	}
+	if port != "" {
+		buf.WriteString(":" + port)
+	}
 
-	newConnectionString += "?sslmode=disable"
+	buf.WriteString("/?sslmode=disable")
 
 	if Verbose {
-		log.Println("URL:", newConnectionString)
+		log.Println("Connection string:", buf.String())
 	}
 
-	return newConnectionString
+	return buf.String()
 }
 
-// Take apart and rebuild the connection string. Also return the dbname.
-func rebuildConnectionString(connectionString string) (string, string) {
+// Take apart and rebuild the connection string, as a sanity check. Also extract and return the dbname.
+func examineConnectionString(connectionString string) (string, string) {
 	username, password, hasPassword, hostname, port, dbname := splitConnectionString(connectionString)
 	return buildConnectionString(username, password, hasPassword, hostname, port, dbname), dbname
 }
