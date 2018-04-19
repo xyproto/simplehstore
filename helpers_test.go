@@ -24,3 +24,13 @@ func TestArgs(t *testing.T) {
 		t.Errorf("Error, the connection string could not be picked apart correctly: %s != %s", a, s)
 	}
 }
+
+func TestTravisDSN(t *testing.T) {
+	Verbose = true
+	a := "postgres:@127.0.0.1"
+	b := "postgres://postgres@127.0.0.1:5432/test?sslmode=disable"
+	s, _ := rebuildConnectionString(a)
+	if s != b {
+		t.Errorf("Error, the connection string could not be picked apart correctly:\n\t%s !=\n\t%s\ngiven %s", s, b, a)
+	}
+}

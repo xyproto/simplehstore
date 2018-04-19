@@ -63,18 +63,17 @@ func splitConnectionString(connectionString string) (username, password string, 
 		hostPort = strings.TrimRight(connectionString, "/")
 		dbname = defaultDatabaseName
 	}
+	if strings.Contains(hostPort, "@") {
+		hostPort = rightOf(hostPort, "@")
+	}
 	// Optional right side of : with password
-	password = rightOf(userPass, ":")
+	password = strings.TrimSpace(rightOf(userPass, ":"))
 	if password != "" {
 		username = leftOf(userPass, ":")
 	} else {
-		if strings.HasSuffix(userPass, ":") {
-			username = userPass[:len(userPass)-1]
-			hasPassword = true
-		} else {
-			username = userPass
-		}
+		username = strings.TrimRight(userPass, ":")
 	}
+	hasPassword = password != ""
 	// Optional right side of : with port
 	port = rightOf(hostPort, ":")
 	if port != "" {
