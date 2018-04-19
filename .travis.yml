@@ -1,12 +1,13 @@
 language: go
 
 addons:
-    - postgresql: "9.1"
+  - postgresql: "9.6"
 
 services:
-    - postgresql
+  - postgresql
 
 go:
-    - 1.9
-    - "1.10"
-    - tip
+  - 1.8
+  - 1.9
+  - "1.10"
+  - tip
