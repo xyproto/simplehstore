@@ -650,6 +650,19 @@ func TestHashMap(t *testing.T) {
 	if item != value {
 		t.Errorf("Error, expected %s, got %s!", value, item)
 	}
+
+	keys, err := hashmap.Keys(username)
+	if err != nil {
+		t.Error(err)
+	}
+	// only "password"
+	if len(keys) != 1 {
+		t.Errorf("Error, wrong keys: %v\n", keys)
+	}
+	if keys[0] != "password" {
+		t.Errorf("Error, wrong keys: %v\n", keys)
+	}
+
 	err = hashmap.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
