@@ -1,0 +1,10 @@
+# github.com/lib/pq v1.0.0
+github.com/lib/pq
+github.com/lib/pq/oid
+# github.com/xyproto/cookie v0.0.0-20171003173729-8ce3defb0907
+github.com/xyproto/cookie
+# github.com/xyproto/pinterface v0.0.0-20181004125811-9710ef24b684
+github.com/xyproto/pinterface
+# golang.org/x/crypto v0.0.0-20181001203147-e3636079e1a4
+golang.org/x/crypto/bcrypt
+golang.org/x/crypto/blowfish
