@@ -383,6 +383,12 @@ func (l *List) GetLastN(n int) ([]string, error) {
 	return l.LastN(n)
 }
 
+// RemoveByIndex can remove the Nth item, in the same order as returned by All()
+func (l *List) RemoveByIndex(index int) error {
+	_, err := l.host.db.Exec(fmt.Sprintf("DELETE FROM %s WHERE id IN (SELECT id FROM %s ORDER BY id LIMIT 1 OFFSET %d)", l.table, l.table, index))
+	return err
+}
+
 // Remove this list
 func (l *List) Remove() error {
 	// Remove the table
