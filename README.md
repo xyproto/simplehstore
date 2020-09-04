@@ -86,7 +86,7 @@ func main() {
 Testing
 -------
 
-* A PostgreSQL server must be up and running locally for `go test` to work.
+* A PostgreSQL server must be up and running locally for `go test` to work, and a database named `test` must exist.
 
 
 License, author and version
@@ -94,4 +94,4 @@ License, author and version
 
 * License: MIT
 * Author: Alexander F. Rødseth &lt;xyproto@archlinux.org&gt;
-* Version: 2.4.0
+* Version: 2.5.0
