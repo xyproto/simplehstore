@@ -20,6 +20,7 @@ Features and limitations
 ------------------------
 
 * Requires PostgreSQL 9.1 or later.
+* Requires Go 1.10 or later.
 * Supports simple use of lists, hashmaps, sets and key/values.
 * Deals mainly with strings.
 * Uses the [pq](https://github.com/lib/pq) package.
