@@ -304,7 +304,7 @@ func (l *List) All() ([]string, error) {
 	return values, err
 }
 
-// Deprecated
+// GetAll is deprecated in favor of All
 func (l *List) GetAll() ([]string, error) {
 	return l.All()
 }
@@ -338,7 +338,7 @@ func (l *List) Last() (string, error) {
 	return value, nil
 }
 
-// Deprecated
+// GetLast is deprecated in favor of Last
 func (l *List) GetLast() (string, error) {
 	return l.Last()
 }
@@ -378,7 +378,7 @@ func (l *List) LastN(n int) ([]string, error) {
 	return values, nil
 }
 
-// Deprecated
+// GetLastN is deprecated in favor of LastN
 func (l *List) GetLastN(n int) ([]string, error) {
 	return l.LastN(n)
 }
@@ -487,7 +487,7 @@ func (s *Set) All() ([]string, error) {
 	return values, err
 }
 
-// Deprecated
+// GetAll is deprecated in favor of All
 func (s *Set) GetAll() ([]string, error) {
 	return s.All()
 }
@@ -680,7 +680,7 @@ func (h *HashMap) All() ([]string, error) {
 	return values, err
 }
 
-// Deprecated
+// GetAll is deprecated in favor of All
 func (h *HashMap) GetAll() ([]string, error) {
 	return h.All()
 }
