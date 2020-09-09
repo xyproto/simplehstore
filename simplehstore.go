@@ -251,18 +251,6 @@ func (host *Host) Ping() error {
 	return host.db.Ping()
 }
 
-// Begin marks the beginning of a series of commands (a batch)
-func (host *Host) Begin() error {
-	_, err := host.db.Exec("BEGIN")
-	return err
-}
-
-// End marks the end of a series of commands (a batch)
-func (host *Host) End() error {
-	_, err := host.db.Exec("END")
-	return err
-}
-
 /* --- List functions --- */
 
 // NewList creates a new List. Lists are ordered.
@@ -554,6 +542,7 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
+
 	// See if the owner and key already exists
 	hasKey, err := h.Has(owner, key)
 	if err != nil {
@@ -575,6 +564,28 @@ func (h *HashMap) Set(owner, key, value string) error {
 		if Verbose {
 			log.Println("Added to HSTORE table: " + h.table)
 		}
+	}
+	return err
+
+}
+
+// Return the SQL string for setting a value. Useful for batch imports.
+func (h *HashMap) SetString(owners string, key string, values string) string {
+	// See if the owner and key already exists
+	hasKey, err := h.Has(owner, key)
+	if err != nil {
+		return err
+	}
+	if Verbose {
+		log.Printf("%s/%s exists? %v\n", owner, key, hasKey)
+	}
+	if !h.host.rawUTF8 {
+		Encode(&value)
+	}
+	if hasKey {
+		return fmt.Sprintf("UPDATE %s SET attr = attr || '\"%s\"=>\"%s\"' :: hstore WHERE %s = %s AND attr ? %s", h.table, escape(key), escape(value), ownerCol, singleQuote(owner), singleQuote(key))
+	} else {
+		return fmt.Sprintf("INSERT INTO %s (%s, attr) VALUES (%s, '\"%s\"=>\"%s\"')", h.table, ownerCol, singleQuote(owner), escape(key), escape(value))
 	}
 	return err
 }
