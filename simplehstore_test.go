@@ -1,7 +1,7 @@
 package simplehstore
 
 import (
-	"strconv"
+	"fmt"
 	"testing"
 
 	// For testing the storage of bcrypt password hashes
@@ -231,7 +231,6 @@ func TestHashMapUserState(t *testing.T) {
 	//host := New() // locally
 	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
 	//host := NewHost("go:go@/main") // laptop
-
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
 	if err != nil {
@@ -788,41 +787,29 @@ func TestRemoveItem(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error, could not remove list! %s", err.Error())
 	}
-
 }
 
-func TestBeginEnd(t *testing.T) {
+func ExampleSetString() {
+
+	//host := New() // locally
 	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	//host := NewHost("go:go@/main") // laptop
 	defer host.Close()
 
-	list, err := NewList(host, listname)
+	host.SetRawUTF8(true)
+
+	hashmap, err := NewHashMap(host, hashmapname)
 	if err != nil {
-		t.Error(err)
-	}
-	list.Clear()
-
-	// Add 1000 strings in one COMMIT
-	host.Begin()
-	for x := 0; x < 1000; x++ {
-		s := strconv.Itoa(x)
-		if err := list.Add(s); err != nil {
-			t.Errorf("Error, could not add item to list! %s", err.Error())
-		}
-	}
-	host.End()
-
-	// Check that the last item is "999"
-	item, err := list.GetLast()
-	if err != nil {
-		t.Errorf("Error, could not get last item from list! %s", err.Error())
-	}
-	if item != "999" {
-		t.Errorf("Error, expected %s, got %s with GetLast()!", "999", item)
+		fmt.Println(err)
 	}
 
-	err = list.Remove()
-	if err != nil {
-		t.Errorf("Error, could not remove list! %s", err.Error())
-	}
+	hashmap.Clear()
 
+	// Generate two SQL statements
+	fmt.Println(hashmap.SetString("bob", "password", "hunter1") + ";" + hashmap.SetString("bob", "email", "bob@zombo.com"))
+
+	hashmap.Remove()
+
+	// output:
+	// INSERT INTO "testhashmap" (owner, attr) VALUES ('bob', '"password"=>"hunter1"');INSERT INTO "testhashmap" (owner, attr) VALUES ('bob', '"email"=>"bob@zombo.com"')
 }

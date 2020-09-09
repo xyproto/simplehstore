@@ -569,12 +569,12 @@ func (h *HashMap) Set(owner, key, value string) error {
 
 }
 
-// Return the SQL string for setting a value. Useful for batch imports.
-func (h *HashMap) SetString(owners string, key string, values string) string {
+// SetString will return the SQL string for setting a value. Useful for batch imports. Returns an empty string if there are issues.
+func (h *HashMap) SetString(owner, key, value string) string {
 	// See if the owner and key already exists
 	hasKey, err := h.Has(owner, key)
 	if err != nil {
-		return err
+		return ""
 	}
 	if Verbose {
 		log.Printf("%s/%s exists? %v\n", owner, key, hasKey)
@@ -584,10 +584,8 @@ func (h *HashMap) SetString(owners string, key string, values string) string {
 	}
 	if hasKey {
 		return fmt.Sprintf("UPDATE %s SET attr = attr || '\"%s\"=>\"%s\"' :: hstore WHERE %s = %s AND attr ? %s", h.table, escape(key), escape(value), ownerCol, singleQuote(owner), singleQuote(key))
-	} else {
-		return fmt.Sprintf("INSERT INTO %s (%s, attr) VALUES (%s, '\"%s\"=>\"%s\"')", h.table, ownerCol, singleQuote(owner), escape(key), escape(value))
 	}
-	return err
+	return fmt.Sprintf("INSERT INTO %s (%s, attr) VALUES (%s, '\"%s\"=>\"%s\"')", h.table, ownerCol, singleQuote(owner), escape(key), escape(value))
 }
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password").
