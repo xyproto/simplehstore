@@ -17,7 +17,7 @@ import (
 
 const (
 	// Version number. Stable API within major version numbers.
-	Version = 2.5
+	Version = 2.6
 )
 
 var (
@@ -249,6 +249,18 @@ func (host *Host) Close() {
 // Ping the host
 func (host *Host) Ping() error {
 	return host.db.Ping()
+}
+
+// Begin marks the beginning of a series of commands (a batch)
+func (host *Host) Begin() error {
+	_, err := host.db.Exec("BEGIN")
+	return err
+}
+
+// End marks the end of a series of commands (a batch)
+func (host *Host) End() error {
+	_, err := host.db.Exec("END")
+	return err
 }
 
 /* --- List functions --- */
@@ -863,7 +875,8 @@ func (kv *KeyValue) Remove() error {
 
 // Clear this key/value
 func (kv *KeyValue) Clear() error {
-	// Remove the table
+	// Truncate the table
 	_, err := kv.host.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s", pq.QuoteIdentifier(kvPrefix+kv.table)))
 	return err
+
 }

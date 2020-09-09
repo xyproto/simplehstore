@@ -1,6 +1,7 @@
 package simplehstore
 
 import (
+	"strconv"
 	"testing"
 
 	// For testing the storage of bcrypt password hashes
@@ -92,6 +93,7 @@ func TestList2(t *testing.T) {
 	if err := list.Add(testdata2); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
+
 	item, err := list.GetLast()
 	if err != nil {
 		t.Errorf("Error, could not get last item from list! %s", err.Error())
@@ -99,6 +101,7 @@ func TestList2(t *testing.T) {
 	if item != testdata2 {
 		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata2, item)
 	}
+
 	items, err := list.GetLastN(2)
 	if err != nil {
 		t.Errorf("Error, could not get last N items from list! %s", err.Error())
@@ -758,6 +761,7 @@ func TestRemoveItem(t *testing.T) {
 	if err := list.Add(testdata1); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
+
 	if err := list.Add(testdata2); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
@@ -784,4 +788,41 @@ func TestRemoveItem(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error, could not remove list! %s", err.Error())
 	}
+
+}
+
+func TestBeginEnd(t *testing.T) {
+	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	defer host.Close()
+
+	list, err := NewList(host, listname)
+	if err != nil {
+		t.Error(err)
+	}
+	list.Clear()
+
+	// Add 1000 strings in one COMMIT
+	host.Begin()
+	for x := 0; x < 1000; x++ {
+		s := strconv.Itoa(x)
+		if err := list.Add(s); err != nil {
+			t.Errorf("Error, could not add item to list! %s", err.Error())
+		}
+	}
+	host.End()
+
+	// Check that the last item is "999"
+	item, err := list.GetLast()
+	if err != nil {
+		t.Errorf("Error, could not get last item from list! %s", err.Error())
+	}
+	if item != "999" {
+		t.Errorf("Error, expected %s, got %s with GetLast()!", "999", item)
+	}
+
+	err = list.Remove()
+	if err != nil {
+		t.Errorf("Error, could not remove list! %s", err.Error())
+	}
+
 }
