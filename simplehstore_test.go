@@ -788,28 +788,3 @@ func TestRemoveItem(t *testing.T) {
 		t.Errorf("Error, could not remove list! %s", err.Error())
 	}
 }
-
-func ExampleSetString() {
-
-	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
-	//host := NewHost("go:go@/main") // laptop
-	defer host.Close()
-
-	host.SetRawUTF8(true)
-
-	hashmap, err := NewHashMap(host, hashmapname)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	hashmap.Clear()
-
-	// Generate two SQL statements
-	fmt.Println(hashmap.SetString("bob", "password", "hunter1") + ";" + hashmap.SetString("bob", "email", "bob@zombo.com"))
-
-	hashmap.Remove()
-
-	// output:
-	// INSERT INTO "testhashmap" (owner, attr) VALUES ('bob', '"password"=>"hunter1"');INSERT INTO "testhashmap" (owner, attr) VALUES ('bob', '"email"=>"bob@zombo.com"')
-}
