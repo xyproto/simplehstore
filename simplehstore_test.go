@@ -1,7 +1,6 @@
 package simplehstore
 
 import (
-	"fmt"
 	"testing"
 
 	// For testing the storage of bcrypt password hashes
