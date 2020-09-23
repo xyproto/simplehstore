@@ -48,7 +48,7 @@ func TestList1(t *testing.T) {
 	if err := list.Add(testdata1); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
-	items, err := list.GetAll()
+	items, err := list.All()
 	if err != nil {
 		t.Errorf("Error when retrieving list! %s", err.Error())
 	}
@@ -64,7 +64,7 @@ func TestList1(t *testing.T) {
 	if err := list.Add(testdata3); err != nil {
 		t.Errorf("Error, could not add item to list! %s", err.Error())
 	}
-	items, err = list.GetAll()
+	items, err = list.All()
 	if err != nil {
 		t.Errorf("Error when retrieving list! %s", err.Error())
 	}
@@ -136,7 +136,7 @@ func TestSet(t *testing.T) {
 	if err := set.Add(testdata1); err != nil {
 		t.Errorf("Error, could not add item to set! %s", err.Error())
 	}
-	items, err := set.GetAll()
+	items, err := set.All()
 	if err != nil {
 		t.Errorf("Error when retrieving set! %s", err.Error())
 	}
@@ -156,7 +156,7 @@ func TestSet(t *testing.T) {
 	if err := set.Add(testdata3); err != nil {
 		t.Errorf("Error, could not add item to set! %s", err.Error())
 	}
-	items, err = set.GetAll()
+	items, err = set.All()
 	if err != nil {
 		t.Errorf("Error when retrieving set! %s", err.Error())
 	}
@@ -188,7 +188,7 @@ func TestRawSet(t *testing.T) {
 	if err := set.Add(testdata1); err != nil {
 		t.Errorf("Error, could not add item to set! %s", err.Error())
 	}
-	items, err := set.GetAll()
+	items, err := set.All()
 	if err != nil {
 		t.Errorf("Error when retrieving set! %s", err.Error())
 	}
@@ -208,7 +208,7 @@ func TestRawSet(t *testing.T) {
 	if err := set.Add(testdata3); err != nil {
 		t.Errorf("Error, could not add item to set! %s", err.Error())
 	}
-	items, err = set.GetAll()
+	items, err = set.All()
 	if err != nil {
 		t.Errorf("Error when retrieving set! %s", err.Error())
 	}
@@ -476,7 +476,7 @@ func TestDupliSet(t *testing.T) {
 	if err := letters.Add("a"); err != nil {
 		t.Error(err)
 	}
-	x, err := letters.GetAll()
+	x, err := letters.All()
 	if err != nil {
 		t.Error(err)
 	}
@@ -486,7 +486,7 @@ func TestDupliSet(t *testing.T) {
 	if err := letters.Add("b"); err != nil {
 		t.Error(err)
 	}
-	y, err := letters.GetAll()
+	y, err := letters.All()
 	if err != nil {
 		t.Error(err)
 	}
@@ -634,7 +634,7 @@ func TestHashMap(t *testing.T) {
 	if err := hashmap.Set(username, key, value); err != nil {
 		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
 	}
-	items, err := hashmap.GetAll()
+	items, err := hashmap.All()
 	if err != nil {
 		t.Errorf("Error when retrieving elements! %s", err.Error())
 	}
@@ -704,7 +704,7 @@ func TestDashesAndQuotes(t *testing.T) {
 	if err := hashmap.Set(username, key, value); err != nil {
 		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
 	}
-	if _, err := hashmap.GetAll(); err != nil {
+	if _, err := hashmap.All(); err != nil {
 		t.Errorf("Error when retrieving elements! %s", err.Error())
 	}
 	item, err := hashmap.Get(username, key)
