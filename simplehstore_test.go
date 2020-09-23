@@ -1,6 +1,7 @@
 package simplehstore
 
 import (
+	"fmt"
 	"testing"
 
 	// For testing the storage of bcrypt password hashes
@@ -630,10 +631,12 @@ func TestHashMap(t *testing.T) {
 	if err := hashmap.Set(username, key, value); err != nil {
 		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
 	}
+
 	// Once more, with the same data
 	if err := hashmap.Set(username, key, value); err != nil {
 		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
 	}
+
 	items, err := hashmap.All()
 	if err != nil {
 		t.Errorf("Error when retrieving elements! %s", err.Error())
@@ -641,6 +644,21 @@ func TestHashMap(t *testing.T) {
 	if len(items) != 1 {
 		t.Errorf("Error, wrong element length! %v", len(items))
 	}
+
+	// Add one more item, so that there shall be 2 items
+	if err := hashmap.Set("alice", "number", "42"); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+
+	// Retrieve items again and check the length
+	items, err = hashmap.All()
+	if len(items) != 2 {
+		for i, item := range items {
+			fmt.Printf("ITEM %d IS %v\n", i, item)
+		}
+		t.Errorf("Error, wrong element length! %v", len(items))
+	}
+
 	if (len(items) > 0) && (items[0] != username) {
 		t.Errorf("Error, wrong elementid! %v", items)
 	}
