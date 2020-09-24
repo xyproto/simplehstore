@@ -474,7 +474,7 @@ func (s *Set) All() ([]string, error) {
 		values []string
 		value  string
 	)
-	rows, err := s.host.db.Query(fmt.Sprintf("SELECT %s FROM %s", setCol, s.table))
+	rows, err := s.host.db.Query(fmt.Sprintf("SELECT DISTINCT %s FROM %s", setCol, s.table))
 	if err != nil {
 		return values, err
 	}
@@ -664,7 +664,7 @@ func (h *HashMap) All() ([]string, error) {
 		values []string
 		value  string
 	)
-	rows, err := h.host.db.Query(fmt.Sprintf("SELECT %s FROM %s", ownerCol, h.table))
+	rows, err := h.host.db.Query(fmt.Sprintf("SELECT DISTINCT %s FROM %s", ownerCol, h.table))
 	if err != nil {
 		return values, err
 	}
@@ -684,6 +684,26 @@ func (h *HashMap) All() ([]string, error) {
 	}
 	err = rows.Err()
 	return values, err
+
+}
+
+// Count counts the number of owners for hash map elements
+func (h *HashMap) Count() (int, error) {
+	value := -1
+	rows, err := h.host.db.Query(fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT %s FROM %s) as temp", ownerCol, h.table))
+	if err != nil {
+		return value, err
+	}
+	if rows == nil {
+		return value, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err = rows.Scan(&value)
+		return value, nil
+	}
+	err = rows.Err()
+	return value, err
 }
 
 // GetAll is deprecated in favor of All

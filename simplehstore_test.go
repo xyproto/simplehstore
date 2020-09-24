@@ -645,7 +645,13 @@ func TestHashMap(t *testing.T) {
 		t.Errorf("Error, wrong element length! %v", len(items))
 	}
 
-	// Add one more item, so that there shall be 2 items
+	// Add one more item, so that there are 2 entries in the database
+	if err := hashmap.Set("bob", "number", "42"); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+	}
+
+	// Add one more item, so that there are 3 entries in the database,
+	// two with owner "bob" and 1 with owner "alice"
 	if err := hashmap.Set("alice", "number", "42"); err != nil {
 		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
 	}
@@ -668,6 +674,17 @@ func TestHashMap(t *testing.T) {
 	}
 	if item != value {
 		t.Errorf("Error, expected %s, got %s!", value, item)
+	}
+
+	count, err := hashmap.Count()
+	if count != 2 {
+		t.Errorf("Error, expected the count of bob and alice to be 2, got %d!", count)
+	}
+
+	// Delete the "number" property/key from owner "bob"
+	err = hashmap.DelKey("bob", "number")
+	if err != nil {
+		t.Error(err)
 	}
 
 	keys, err := hashmap.Keys(username)
