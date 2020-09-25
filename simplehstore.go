@@ -17,7 +17,7 @@ import (
 
 const (
 	// Version number. Stable API within major version numbers.
-	Version = 2.7.1
+	Version = 2.7
 )
 
 var (
@@ -907,5 +907,4 @@ func (kv *KeyValue) Clear() error {
 	// Truncate the table
 	_, err := kv.host.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s", pq.QuoteIdentifier(kvPrefix+kv.table)))
 	return err
-
 }
