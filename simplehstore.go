@@ -17,7 +17,7 @@ import (
 
 const (
 	// Version number. Stable API within major version numbers.
-	Version = 2.7
+	Version = 2.7.1
 )
 
 var (
@@ -95,7 +95,7 @@ func TestConnection() (err error) {
 // TestConnectionHost checks if a given database server is up and running.
 // connectionString may be on the form "username:password@host:port/database".
 // The database name is ignored.
-func TestConnectionHost(connectionString string) (err error) {
+func TestConnectionHost(connectionString string) error {
 	newConnectionString, _ := rebuildConnectionString(connectionString, false)
 	// Connect to the given host:port
 	db, err := sql.Open("postgres", newConnectionString)
@@ -115,7 +115,7 @@ func TestConnectionHost(connectionString string) (err error) {
 }
 
 // TestConnectionHostWithDSN checks if a given database server is up and running.
-func TestConnectionHostWithDSN(connectionString string) (err error) {
+func TestConnectionHostWithDSN(connectionString string) error {
 	// Connect to the given host:port
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
@@ -148,41 +148,62 @@ func escape(s string) string {
 // NewHost sets up a new database connection.
 // connectionString may be on the form "username:password@host:port/database".
 func NewHost(connectionString string) *Host {
-	newConnectionString, dbname := rebuildConnectionString(connectionString, true)
-	db, err := sql.Open("postgres", newConnectionString)
+	host, err := NewHost2(connectionString)
 	if err != nil {
-		log.Fatalln("Could not connect to " + newConnectionString + "!")
-	}
-	host := &Host{db, pq.QuoteIdentifier(dbname), false}
-	if err := host.Ping(); err != nil {
-		log.Fatalln("Host does not reply to ping: " + err.Error())
-	}
-	if err := host.createDatabase(); err != nil {
-		log.Fatalln("Could not create database " + host.dbname + ": " + err.Error())
-	}
-	if err := host.useDatabase(); err != nil {
-		panic("Could not use database " + host.dbname + ": " + err.Error())
+		log.Fatalln(err)
 	}
 	return host
 }
 
-// NewHostWithDSN creates a new database connection with a valid DSN.
-func NewHostWithDSN(connectionString string, dbname string) *Host {
-	db, err := sql.Open("postgres", connectionString)
+// NewHost2 sets up a new database connection.
+// connectionString may be on the form "username:password@host:port/database".
+// An error may be returned.
+func NewHost2(connectionString string) (*Host, error) {
+	newConnectionString, dbname := rebuildConnectionString(connectionString, true)
+	db, err := sql.Open("postgres", newConnectionString)
 	if err != nil {
-		log.Fatalln("Could not connect to " + connectionString + "!")
+		return nil, fmt.Errorf("could not connect to %s", newConnectionString)
 	}
 	host := &Host{db, pq.QuoteIdentifier(dbname), false}
 	if err := host.Ping(); err != nil {
-		log.Fatalln("Host does not reply to ping: " + err.Error())
+		return nil, fmt.Errorf("database host does not reply to ping: %s", err)
 	}
 	if err := host.createDatabase(); err != nil {
-		log.Fatalln("Could not create database " + host.dbname + ": " + err.Error())
+		return nil, fmt.Errorf("could not create database %s: %s", host.dbname, err)
 	}
 	if err := host.useDatabase(); err != nil {
-		panic("Could not use database " + host.dbname + ": " + err.Error())
+		return nil, fmt.Errorf("could not use database %s: %s", host.dbname, err)
+	}
+	return host, nil
+}
+
+// NewHostWithDSN creates a new database connection with a valid DSN.
+func NewHostWithDSN(connectionString string, dbname string) *Host {
+	host, err := NewHostWithDSN2(connectionString, dbname)
+	if err != nil {
+		log.Fatalln(err)
 	}
 	return host
+}
+
+// NewHostWithDSN2 creates a new database connection with a valid DSN.
+// An error may be returned.
+func NewHostWithDSN2(connectionString string, dbname string) (*Host, error) {
+	db, err := sql.Open("postgres", connectionString)
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to %s", connectionString)
+	}
+	host := &Host{db, pq.QuoteIdentifier(dbname), false}
+	if err := host.Ping(); err != nil {
+		return nil, fmt.Errorf("database host does not reply to ping: %s", err)
+	}
+	if err := host.createDatabase(); err != nil {
+		return nil, fmt.Errorf("could not create database %s: %s", host.dbname, err)
+	}
+	if err := host.useDatabase(); err != nil {
+		return nil, fmt.Errorf("could not use database %s: %s", host.dbname, err)
+	}
+	return host, nil
 }
 
 // New sets up a connection to the default (local) database host
