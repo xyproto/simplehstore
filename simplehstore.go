@@ -698,12 +698,12 @@ func (h *HashMap) Count() (int, error) {
 		return value, ErrNoAvailableValues
 	}
 	defer rows.Close()
-	for rows.Next() {
-		err = rows.Scan(&value)
-		return value, nil
+	rows.Next()
+	err = rows.Scan(&value)
+	if err != nil {
+		return value, err
 	}
-	err = rows.Err()
-	return value, err
+	return value, nil
 }
 
 // GetAll is deprecated in favor of All

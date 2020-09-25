@@ -658,6 +658,9 @@ func TestHashMap(t *testing.T) {
 
 	// Retrieve items again and check the length
 	items, err = hashmap.All()
+	if err != nil {
+		t.Errorf("Error, could not retrieve all items! %s", err.Error())
+	}
 	if len(items) != 2 {
 		for i, item := range items {
 			fmt.Printf("ITEM %d IS %v\n", i, item)
@@ -677,6 +680,9 @@ func TestHashMap(t *testing.T) {
 	}
 
 	count, err := hashmap.Count()
+	if err != nil {
+		t.Error("Error, could not get the count!")
+	}
 	if count != 2 {
 		t.Errorf("Error, expected the count of bob and alice to be 2, got %d!", count)
 	}
