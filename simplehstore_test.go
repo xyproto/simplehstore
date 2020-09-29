@@ -693,6 +693,12 @@ func TestHashMap(t *testing.T) {
 		t.Error(err)
 	}
 
+	// Delete the "number" property/key from owner "alice"
+	err = hashmap.DelKey("alice", "number")
+	if err != nil {
+		t.Error(err)
+	}
+
 	keys, err := hashmap.Keys(username)
 	if err != nil {
 		t.Error(err)
