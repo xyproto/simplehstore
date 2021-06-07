@@ -688,6 +688,15 @@ func TestHashMap(t *testing.T) {
 		t.Errorf("Error, expected the count of bob and alice to be 2, got %d!", count)
 	}
 
+	items, err = hashmap.AllWhere("number", "42")
+	if err != nil {
+		t.Error("Error, could not get value for property number")
+	}
+	if len(items) == 0 {
+		t.Error("Error, there should be more than 0 entries for the number property")
+	}
+	fmt.Println("Items where number is 42:", items)
+
 	// Delete the "number" property/key from owner "bob"
 	err = hashmap.DelKey("bob", "number")
 	if err != nil {
