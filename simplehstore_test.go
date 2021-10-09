@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/xyproto/cookie"
+	"github.com/xyproto/env"
 	"github.com/xyproto/pinterface"
 )
 
@@ -24,11 +25,13 @@ const (
 	testdata3    = "ghi789"
 )
 
+var connectionString = env.Str("POSTGRES_USER", "postgres") + ":" + env.Str("POSTGRES_PASSWORD", "") + "@127.0.0.1/" // for CI testing
+
 func TestLocalConnection(t *testing.T) {
 	Verbose = true
 
 	//err := TestConnection() // locally
-	err := TestConnectionHost("postgres:@127.0.0.1/") // for travis-ci
+	err := TestConnectionHost(connectionString)
 	//err := TestConnectionHost("go:go@/main") // laptop
 	if err != nil {
 		t.Errorf(err.Error())
@@ -37,7 +40,7 @@ func TestLocalConnection(t *testing.T) {
 
 func TestList1(t *testing.T) {
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 	defer host.Close()
 
@@ -79,7 +82,7 @@ func TestList1(t *testing.T) {
 }
 
 func TestList2(t *testing.T) {
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	defer host.Close()
 
 	list, err := NewList(host, listname)
@@ -125,7 +128,7 @@ func TestSet(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
@@ -177,7 +180,7 @@ func TestRawSet(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
@@ -229,7 +232,7 @@ func TestHashMapUserState(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
@@ -291,7 +294,7 @@ func TestKeyValue(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
@@ -330,7 +333,7 @@ func TestHashKvMix(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
@@ -364,7 +367,7 @@ func TestHashStorage(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
@@ -505,7 +508,7 @@ func TestInc(t *testing.T) {
 		testvalue1 = "10"
 		testvalue2 = "1"
 	)
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	defer host.Close()
 	kv, err := NewKeyValue(host, kvname)
 	if err != nil {
@@ -555,7 +558,7 @@ func TestInc2(t *testing.T) {
 		testkey    = "key_237_test_test_test_inc"
 		emptyvalue = "1"
 	)
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	defer host.Close()
 	kv, err := NewKeyValue(host, kvname)
 	if err != nil {
@@ -577,7 +580,7 @@ func TestHashMapUserState2(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
@@ -608,7 +611,7 @@ func TestHashMap(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
@@ -734,7 +737,7 @@ func TestDashesAndQuotes(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
@@ -784,7 +787,7 @@ func TestInc3(t *testing.T) {
 		testkey    = "key_237_test_test_test_inc's-x"
 		emptyvalue = "1"
 	)
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	defer host.Close()
 	kv, err := NewKeyValue(host, kvname)
 	if err != nil {
@@ -804,7 +807,7 @@ func TestInc3(t *testing.T) {
 
 func TestRemoveItem(t *testing.T) {
 
-	host := NewHost("postgres:@127.0.0.1/") // for travis-ci
+	host := NewHost(connectionString)
 	defer host.Close()
 
 	list, err := NewList(host, listname)
