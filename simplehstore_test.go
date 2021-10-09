@@ -32,7 +32,6 @@ func TestLocalConnection(t *testing.T) {
 
 	//err := TestConnection() // locally
 	err := TestConnectionHost(connectionString)
-	//err := TestConnectionHost("go:go@/main") // laptop
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -41,7 +40,6 @@ func TestLocalConnection(t *testing.T) {
 func TestList1(t *testing.T) {
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 	defer host.Close()
 
 	list, err := NewList(host, listname)
@@ -129,7 +127,6 @@ func TestSet(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
 	set, err := NewSet(host, setname)
@@ -181,7 +178,6 @@ func TestRawSet(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
 	set, err := NewSet(host, setname)
@@ -233,7 +229,7 @@ func TestHashMapUserState(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
+
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
 	if err != nil {
@@ -295,7 +291,6 @@ func TestKeyValue(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
 	keyvalue, err := NewKeyValue(host, keyvaluename)
@@ -334,7 +329,6 @@ func TestHashKvMix(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
 
@@ -368,7 +362,6 @@ func TestHashStorage(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
@@ -430,7 +423,7 @@ func TestTwoFields(t *testing.T) {
 
 // Check that "bob" is confirmed
 func TestConfirmed(t *testing.T) {
-	host := NewHost("postgres:@127.0.0.1/")
+	host := NewHost(connectionString)
 	defer host.Close()
 	users, err := NewHashMap(host, "users")
 	if err != nil {
@@ -466,7 +459,7 @@ func TestConfirmed(t *testing.T) {
 }
 
 func TestDupliSet(t *testing.T) {
-	host := NewHost("postgres:@127.0.0.1/")
+	host := NewHost(connectionString)
 	defer host.Close()
 	letters, err := NewSet(host, "letters")
 	if err != nil {
@@ -581,7 +574,6 @@ func TestHashMapUserState2(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
@@ -612,7 +604,6 @@ func TestHashMap(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
@@ -738,7 +729,6 @@ func TestDashesAndQuotes(t *testing.T) {
 
 	//host := New() // locally
 	host := NewHost(connectionString)
-	//host := NewHost("go:go@/main") // laptop
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname+"'s-")
