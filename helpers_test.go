@@ -2,6 +2,8 @@ package simplehstore
 
 import (
 	"testing"
+
+	"github.com/xyproto/env"
 )
 
 func TestPostgresPrefix(t *testing.T) {
@@ -28,7 +30,7 @@ func TestArgs(t *testing.T) {
 func TestTravisDSN(t *testing.T) {
 	Verbose = true
 	a := "postgres:@127.0.0.1"
-	b := "postgres://postgres@127.0.0.1:5432/test?sslmode=disable"
+	b := "postgres://" + env.Str("POSTGRES_USER", "postgres") + ":" + env.Str("POSTGRES_PASSWORD") + "@127.0.0.1:5432/?sslmode=disable"
 	s, _ := rebuildConnectionString(a, true)
 	if s != b {
 		t.Errorf("Error, the connection string could not be picked apart correctly:\n\t%s !=\n\t%s\ngiven %s", s, b, a)
@@ -38,7 +40,7 @@ func TestTravisDSN(t *testing.T) {
 func TestTravisDSN2(t *testing.T) {
 	Verbose = true
 	a := "postgres:@127.0.0.1"
-	b := "postgres://postgres@127.0.0.1:5432/?sslmode=disable"
+	b := "postgres://" + env.Str("POSTGRES_USER", "postgres") + ":" + env.Str("POSTGRES_PASSWORD") + "@127.0.0.1:5432/?sslmode=disable"
 	s, _ := rebuildConnectionString(a, false)
 	if s != b {
 		t.Errorf("Error, the connection string could not be picked apart correctly:\n\t%s !=\n\t%s\ngiven %s", s, b, a)
