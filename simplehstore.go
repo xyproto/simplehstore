@@ -16,6 +16,15 @@ import (
 	"github.com/xyproto/env"
 )
 
+const (
+	// Version number. Stable API within major version numbers.
+	Version = 2.10
+
+	defaultStringType = "TEXT"
+	defaultPort       = 5432
+	encoding          = "UTF8"
+)
+
 // Host represents a PostgreSQL database
 type Host struct {
 	db     *sql.DB
@@ -46,15 +55,6 @@ type (
 
 	// KeyValue is a hash map with a key and a value, stored in PostgreSQL
 	KeyValue dbDatastructure
-)
-
-const (
-	// Version number. Stable API within major version numbers.
-	Version = 2.9
-
-	defaultStringType = "TEXT"
-	defaultPort       = 5432
-	encoding          = "UTF8"
 )
 
 var (
