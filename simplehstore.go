@@ -60,7 +60,7 @@ type (
 var (
 	// The default "username:password@host:port/database" that the database is running at
 	defaultDatabaseServer = env.Str("POSTGRES_USER", "postgres") + "@" + env.Str("POSTGRES_PASSWORD") + "@127.0.0.1/"
-	defaultDatabaseName   = env.Str("POSTGRES_DB", "test")
+	defaultDatabaseName   = env.Str("POSTGRES_DB", "postgres")
 
 	// ErrNoAvailableValues is used as an error if an SQL query returns no values
 	ErrNoAvailableValues = errors.New("no available values")
@@ -127,16 +127,6 @@ func TestConnectionHostWithDSN(connectionString string) error {
 		}
 	}
 	return err
-}
-
-// Enclose in single quote and escape single quotes within
-func singleQuote(s string) string {
-	return "'" + escape(s) + "'"
-}
-
-// Escape single quotes
-func escape(s string) string {
-	return strings.Replace(s, "'", "''", -1)
 }
 
 /* --- Host functions --- */
@@ -544,6 +534,9 @@ func (s *Set) Clear() error {
 // NewHashMap creates a new HashMap struct
 func NewHashMap(host *Host, name string) (*HashMap, error) {
 	h := &HashMap{host, pq.QuoteIdentifier(name)}
+
+	// Create a new table that maps from the owner string (like user ID) to a blob of hstore ("attr hstore")
+
 	// Using three columns: element id, key and value
 	query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s, attr hstore)", h.table, ownerCol, defaultStringType)
 	if _, err := h.host.db.Exec(query); err != nil {
@@ -557,69 +550,159 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 	return h, nil
 }
 
+// CreateIndexTable creates an INDEX table for this hash map, that may speed up lookups
+func (h *HashMap) CreateIndexTable(owner string) error {
+	_, err := h.host.db.Exec(fmt.Sprintf("CREATE INDEX %s_idx ON %s USING GIN (attr)", owner, owner))
+	return err
+}
+
+// RemoveIndexTable removes the INDEX table for this hash map
+func (h *HashMap) RemoveIndexTable(owner string) error {
+	_, err := h.host.db.Exec(fmt.Sprintf("DROP INDEX %s_idx", owner))
+	return err
+}
+
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
-	// See if the owner and key already exists
-	hasKey, err := h.Has(owner, key)
+	return h.SetMap(owner, map[string]string{key: value})
+}
+
+// SetMap is like Set, except that it can set many key+value pairs with one SQL query,
+// and it does not check if each key exists first.
+func (h *HashMap) SetMap(owner string, items map[string]string) error {
+	var (
+		shouldEncode = !h.host.rawUTF8
+		sb           strings.Builder
+	)
+
+	existingKeysForOwner, err := h.Keys(owner)
 	if err != nil {
 		return err
 	}
+
+	// Build the SQL expression
+	for key, value := range items {
+		if shouldEncode {
+			Encode(&value)
+		}
+		// TODO: Set many attributes in one UPDATE or INSERT instead, several hstore keys/values.
+		// TODO: Check if just UPDATE-ing without checking first works just as well.
+		if hasString(existingKeysForOwner, key) {
+			sb.WriteString(fmt.Sprintf("UPDATE %s SET attr = attr || '\"%s\"=>\"%s\"' :: hstore WHERE attr ? %s AND %s = %s;", h.table, escapeSingleQuotes(key), escapeSingleQuotes(value), ownerCol, addSingleQuotesAndEscapeSingleQuotes(key), addSingleQuotesAndEscapeSingleQuotes(owner)))
+		} else {
+			sb.WriteString(fmt.Sprintf("INSERT INTO %s (%s, attr) VALUES (%s, '\"%s\"=>\"%s\"');", h.table, ownerCol, addSingleQuotesAndEscapeSingleQuotes(owner), escapeSingleQuotes(key), escapeSingleQuotes(value)))
+		}
+	}
+
+	// Execute the SQL expression
+	_, err = h.host.db.Exec(sb.String())
 	if Verbose {
-		log.Printf("%s/%s exists? %v\n", owner, key, hasKey)
-	}
-	if !h.host.rawUTF8 {
-		Encode(&value)
-	}
-	if hasKey {
-		_, err = h.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = attr || '\"%s\"=>\"%s\"' :: hstore WHERE %s = %s AND attr ? %s", h.table, escape(key), escape(value), ownerCol, singleQuote(owner), singleQuote(key)))
-		if Verbose {
-			log.Println("Updated HSTORE table: " + h.table)
-		}
-	} else {
-		_, err = h.host.db.Exec(fmt.Sprintf("INSERT INTO %s (%s, attr) VALUES (%s, '\"%s\"=>\"%s\"')", h.table, ownerCol, singleQuote(owner), escape(key), escape(value)))
-		if Verbose {
-			log.Println("Added to HSTORE table: " + h.table)
-		}
+		log.Println("Updated and/or added to HSTORE table: " + h.table)
 	}
 	return err
 }
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password").
 func (h *HashMap) Get(owner, key string) (string, error) {
-	rows, err := h.host.db.Query(fmt.Sprintf("SELECT attr -> %s FROM %s WHERE %s = %s AND attr ? %s", singleQuote(key), h.table, ownerCol, singleQuote(owner), singleQuote(key)))
+	values, err := h.GetMap(owner, []string{key})
 	if err != nil {
 		return "", err
 	}
+	if len(values) != 1 {
+		return "", fmt.Errorf("got %d values, expected 1", len(values))
+	}
+	return values[0], nil
+}
+
+// GetMap retrieves several values from a hashmap given the element id (for instance a user id) and the keys (for instance []string{"password"}).
+func (h *HashMap) GetMap(owner string, keys []string) ([]string, error) {
+	var (
+		sb     strings.Builder
+		values []string
+	)
+	// Build the SQL query
+	for _, key := range keys {
+		sb.WriteString(fmt.Sprintf("SELECT attr -> %s FROM %s WHERE attr ? %q AND %s = %s;", addSingleQuotesAndEscapeSingleQuotes(key), h.table, ownerCol, addSingleQuotesAndEscapeSingleQuotes(key), addSingleQuotesAndEscapeSingleQuotes(owner)))
+	}
+	// Execute the SQL query
+	log.Println("HashMap.GetMap: " + sb.String())
+	rows, err := h.host.db.Query(sb.String())
+	if err != nil {
+		return values, err
+	}
 	if rows == nil {
-		return "", errors.New("HashMap Get returned no rows for owner " + owner + " and key " + key)
+		return values, errors.New("HashMap Get returned no rows for owner " + owner + " and keys " + strings.Join(keys, ", "))
 	}
 	defer rows.Close()
-	var value string
-	// Get the value. Should only loop once.
-	counter := 0
+
+	// Get the values
+	var (
+		x       string
+		counter int
+	)
 	for rows.Next() {
-		err = rows.Scan(&value)
-		if err != nil {
+		if err := rows.Scan(&x); err != nil {
 			// No rows
-			return "", err
+			return values, err
 		}
+		if !h.host.rawUTF8 {
+			Decode(&x)
+		}
+		values = append(values, x)
 		counter++
 	}
 	if err := rows.Err(); err != nil {
-		return "", err
+		return values, err
 	}
 	if counter == 0 {
-		return "", errors.New("No such owner/key: " + owner + "/" + key)
+		return values, errors.New("No such owner/keys: " + owner + "/" + strings.Join(keys, ", "))
 	}
-	if !h.host.rawUTF8 {
-		Decode(&value)
+	if counter != len(keys) {
+		return values, errors.New("Found only some of the keys: " + owner + "/" + strings.Join(keys, ", "))
 	}
-	return value, nil
+	return values, nil
 }
+
+// func (h *HashMap) JSON() (string, error) {
+// 	iq := fmt.Sprintf("SELECT %s, hstore_to_json (%s) json FROM %s", ownerCol, ownerCol, h.table)
+// 	log.Println(iq)
+// 	rows, err := h.host.db.Query(iq)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	if rows == nil {
+// 		return "", errors.New("HashMap JSON returned no rows for owner column " + ownerCol)
+// 	}
+// 	defer rows.Close()
+// 	var value string
+// 	// Get the value. Should only loop once.
+// 	counter := 0
+// 	for rows.Next() {
+// 		err = rows.Scan(&value)
+// 		if err != nil {
+// 			// No rows
+// 			return "", err
+// 		}
+// 		counter++
+// 	}
+// 	if err := rows.Err(); err != nil {
+// 		return "", err
+// 	}
+// 	if counter == 0 {
+// 		return "", errors.New("No such owner column: " + ownerCol)
+// 	}
+// 	if !h.host.rawUTF8 {
+// 		Decode(&value)
+// 	}
+// 	return value, nil
+// }
 
 // Has checks if a given owner + key exists in the hash map
 func (h *HashMap) Has(owner, key string) (bool, error) {
-	rows, err := h.host.db.Query(fmt.Sprintf("SELECT attr -> %s FROM %s WHERE %s = %s AND attr ? %s", singleQuote(key), h.table, ownerCol, singleQuote(owner), singleQuote(key)))
+	iq := fmt.Sprintf("HashMap.Has: SELECT attr -> %s FROM %s WHERE attr ? %s AND %s = %s", addSingleQuotesAndEscapeSingleQuotes(key), h.table, ownerCol, addSingleQuotesAndEscapeSingleQuotes(key), addSingleQuotesAndEscapeSingleQuotes(owner))
+	log.Println(iq)
+
+	rows, err := h.host.db.Query(iq)
 	if err != nil {
 		return false, err
 	}
@@ -650,7 +733,9 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 
 // Exists checks if a given owner exists as a hash map at all
 func (h *HashMap) Exists(owner string) (bool, error) {
-	rows, err := h.host.db.Query(fmt.Sprintf("SELECT attr FROM %s WHERE %s = %s", h.table, ownerCol, singleQuote(owner)))
+	iq := fmt.Sprintf("HashMap.Exists: SELECT attr FROM %s WHERE %q = %s", h.table, ownerCol, addSingleQuotesAndEscapeSingleQuotes(owner))
+	log.Println(iq)
+	rows, err := h.host.db.Query(iq)
 	if err != nil {
 		return false, err
 	}
@@ -760,7 +845,7 @@ func (h *HashMap) GetAll() ([]string, error) {
 
 // Keys returns all keys for a given owner
 func (h *HashMap) Keys(owner string) ([]string, error) {
-	rows, err := h.host.db.Query(fmt.Sprintf("SELECT skeys(attr) FROM %s WHERE %s = %s", h.table, ownerCol, singleQuote(owner)))
+	rows, err := h.host.db.Query(fmt.Sprintf("SELECT skeys(attr) FROM %s WHERE %s = %s", h.table, ownerCol, addSingleQuotesAndEscapeSingleQuotes(owner)))
 	if err != nil {
 		return []string{}, err
 	}
@@ -787,14 +872,14 @@ func (h *HashMap) Keys(owner string) ([]string, error) {
 // DelKey removes a key of an owner in a hashmap (for instance the email field for a user)
 func (h *HashMap) DelKey(owner, key string) error {
 	// Remove a key from the hashmap
-	_, err := h.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = delete(attr, %s) WHERE %s = %s AND attr ? %s", h.table, singleQuote(key), ownerCol, singleQuote(owner), singleQuote(key)))
+	_, err := h.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = delete(attr, %s) WHERE attr ? %s AND %s = %s", h.table, addSingleQuotesAndEscapeSingleQuotes(key), ownerCol, addSingleQuotesAndEscapeSingleQuotes(key), addSingleQuotesAndEscapeSingleQuotes(owner)))
 	return err
 }
 
 // Del removes an element (for instance a user)
 func (h *HashMap) Del(owner string) error {
 	// Remove an element id from the table
-	results, err := h.host.db.Exec(fmt.Sprintf("DELETE FROM %s WHERE %s = %s", h.table, ownerCol, singleQuote(owner)))
+	results, err := h.host.db.Exec(fmt.Sprintf("DELETE FROM %s WHERE %s = %s", h.table, ownerCol, addSingleQuotesAndEscapeSingleQuotes(owner)))
 	if err != nil {
 		return err
 	}
@@ -811,7 +896,9 @@ func (h *HashMap) Del(owner string) error {
 // Remove this hashmap
 func (h *HashMap) Remove() error {
 	// Remove the table
-	_, err := h.host.db.Exec(fmt.Sprintf("DROP TABLE %s", h.table))
+	q := fmt.Sprintf("DROP TABLE %s", h.table)
+	log.Println(q)
+	_, err := h.host.db.Exec(q)
 	return err
 }
 
@@ -839,6 +926,20 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 	return kv, nil
 }
 
+// CreateIndexTable creates an INDEX table for this key/value, that may speed up lookups
+func (kv *KeyValue) CreateIndexTable() error {
+	owner := pq.QuoteIdentifier(kvPrefix + kv.table)
+	_, err := kv.host.db.Exec(fmt.Sprintf("CREATE INDEX %s_idx ON %s USING GIN (attr)", owner, owner))
+	return err
+}
+
+// RemoveIndexTable removes the INDEX table for this key/value
+func (kv *KeyValue) RemoveIndexTable() error {
+	owner := pq.QuoteIdentifier(kvPrefix + kv.table)
+	_, err := kv.host.db.Exec(fmt.Sprintf("DROP INDEX %s_idx", owner))
+	return err
+}
+
 // Set a key and value
 func (kv *KeyValue) Set(key, value string) error {
 	if !kv.host.rawUTF8 {
@@ -846,17 +947,17 @@ func (kv *KeyValue) Set(key, value string) error {
 	}
 	if _, err := kv.Get(key); err != nil {
 		// Key does not exist, create it
-		_, err = kv.host.db.Exec(fmt.Sprintf("INSERT INTO %s (attr) VALUES ('\"%s\"=>\"%s\"')", pq.QuoteIdentifier(kvPrefix+kv.table), escape(key), escape(value)))
+		_, err = kv.host.db.Exec(fmt.Sprintf("INSERT INTO %s (attr) VALUES ('\"%s\"=>\"%s\"')", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(key), escapeSingleQuotes(value)))
 		return err
 	}
 	// Key exists, update the value
-	_, err := kv.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = attr || '\"%s\"=>\"%s\"' :: hstore", pq.QuoteIdentifier(kvPrefix+kv.table), escape(key), escape(value)))
+	_, err := kv.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = attr || '\"%s\"=>\"%s\"' :: hstore", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(key), escapeSingleQuotes(value)))
 	return err
 }
 
 // Get a value given a key
 func (kv *KeyValue) Get(key string) (string, error) {
-	rows, err := kv.host.db.Query(fmt.Sprintf("SELECT attr -> %s FROM %s", singleQuote(key), pq.QuoteIdentifier(kvPrefix+kv.table)))
+	rows, err := kv.host.db.Query(fmt.Sprintf("SELECT attr -> %s FROM %s", addSingleQuotesAndEscapeSingleQuotes(key), pq.QuoteIdentifier(kvPrefix+kv.table)))
 	if err != nil {
 		return "", err
 	}
@@ -917,7 +1018,7 @@ func (kv *KeyValue) Inc(key string) (string, error) {
 
 // Del removes the given key
 func (kv *KeyValue) Del(key string) error {
-	_, err := kv.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = delete(attr, %s)", pq.QuoteIdentifier(kvPrefix+kv.table), singleQuote(key)))
+	_, err := kv.host.db.Exec(fmt.Sprintf("UPDATE %s SET attr = delete(attr, %s)", pq.QuoteIdentifier(kvPrefix+kv.table), addSingleQuotesAndEscapeSingleQuotes(key)))
 	return err
 }
 
