@@ -57,10 +57,19 @@ type (
 	KeyValue dbDatastructure
 )
 
+var defaultConnectionString = func() string {
+	password := env.Str("POSTGRES_PASSWORD")
+	s := env.Str("POSTGRES_USER", "postgres")
+	if password != "" {
+		s += ":" + password
+	}
+	s += "@127.0.0.1/" // for CI testing
+	return s
+}()
+
 var (
 	// The default "username:password@host:port/database" that the database is running at
-	defaultDatabaseServer = env.Str("POSTGRES_USER", "postgres") + "@" + env.Str("POSTGRES_PASSWORD") + "@127.0.0.1/"
-	defaultDatabaseName   = env.Str("POSTGRES_DB", "postgres")
+	defaultDatabaseName = env.Str("POSTGRES_DB", "postgres")
 
 	// ErrNoAvailableValues is used as an error if an SQL query returns no values
 	ErrNoAvailableValues = errors.New("no available values")
@@ -85,7 +94,7 @@ func SetColumnNames(list, set, hashMapOwner, keyValuePrefix string) {
 
 // TestConnection checks if the local database server is up and running
 func TestConnection() (err error) {
-	return TestConnectionHost(defaultDatabaseServer)
+	return TestConnectionHost(defaultConnectionString)
 }
 
 // TestConnectionHost checks if a given database server is up and running.
@@ -194,9 +203,9 @@ func NewHostWithDSN2(connectionString string, dbname string) (*Host, error) {
 
 // New sets up a connection to the default (local) database host
 func New() *Host {
-	connectionString := defaultDatabaseServer + defaultDatabaseName
-	if !strings.HasSuffix(defaultDatabaseServer, "/") {
-		connectionString = defaultDatabaseServer + "/" + defaultDatabaseName
+	connectionString := defaultConnectionString + defaultDatabaseName
+	if !strings.HasSuffix(defaultConnectionString, "/") {
+		connectionString = defaultConnectionString + "/" + defaultDatabaseName
 	}
 	return NewHost(connectionString)
 }

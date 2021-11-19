@@ -11,7 +11,6 @@ import (
 	"io"
 
 	"github.com/xyproto/cookie"
-	"github.com/xyproto/env"
 	"github.com/xyproto/pinterface"
 )
 
@@ -25,13 +24,11 @@ const (
 	testdata3    = "ghi789"
 )
 
-var connectionString = env.Str("POSTGRES_USER", "postgres") + ":" + env.Str("POSTGRES_PASSWORD", "") + "@127.0.0.1/" // for CI testing
-
 func TestLocalConnection(t *testing.T) {
 	Verbose = true
 
 	//err := TestConnection() // locally
-	err := TestConnectionHost(connectionString)
+	err := TestConnectionHost(defaultConnectionString)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -39,7 +36,7 @@ func TestLocalConnection(t *testing.T) {
 
 func TestList1(t *testing.T) {
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 	defer host.Close()
 
 	list, err := NewList(host, listname)
@@ -80,7 +77,7 @@ func TestList1(t *testing.T) {
 }
 
 func TestList2(t *testing.T) {
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 	defer host.Close()
 
 	list, err := NewList(host, listname)
@@ -126,7 +123,7 @@ func TestSet(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 	set, err := NewSet(host, setname)
@@ -177,7 +174,7 @@ func TestRawSet(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 	set, err := NewSet(host, setname)
@@ -228,7 +225,7 @@ func TestHashMapUserStateShort(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
@@ -273,7 +270,7 @@ func TestHashMapUserState(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 
@@ -355,7 +352,7 @@ func TestKeyValue(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 	keyvalue, err := NewKeyValue(host, keyvaluename)
@@ -393,7 +390,7 @@ func TestHashKvMix(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 
@@ -426,7 +423,7 @@ func TestHashStorage(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
@@ -488,7 +485,7 @@ func TestTwoFields(t *testing.T) {
 
 // Check that "bob" is confirmed
 func TestConfirmed(t *testing.T) {
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 	defer host.Close()
 	users, err := NewHashMap(host, "users")
 	if err != nil {
@@ -524,7 +521,7 @@ func TestConfirmed(t *testing.T) {
 }
 
 func TestDupliSet(t *testing.T) {
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 	defer host.Close()
 	letters, err := NewSet(host, "letters")
 	if err != nil {
@@ -566,7 +563,7 @@ func TestInc(t *testing.T) {
 		testvalue1 = "10"
 		testvalue2 = "1"
 	)
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 	defer host.Close()
 	kv, err := NewKeyValue(host, kvname)
 	if err != nil {
@@ -616,7 +613,7 @@ func TestInc2(t *testing.T) {
 		testkey    = "key_237_test_test_test_inc"
 		emptyvalue = "1"
 	)
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 	defer host.Close()
 	kv, err := NewKeyValue(host, kvname)
 	if err != nil {
@@ -638,7 +635,7 @@ func TestHashMapUserState2(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
@@ -668,7 +665,7 @@ func TestHashMap(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname)
@@ -793,7 +790,7 @@ func TestDashesAndQuotes(t *testing.T) {
 	Verbose = true
 
 	//host := New() // locally
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 
 	defer host.Close()
 	hashmap, err := NewHashMap(host, hashmapname+"'s-")
@@ -842,7 +839,7 @@ func TestInc3(t *testing.T) {
 		testkey    = "key_237_test_test_test_inc's-x"
 		emptyvalue = "1"
 	)
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 	defer host.Close()
 	kv, err := NewKeyValue(host, kvname)
 	if err != nil {
@@ -862,7 +859,7 @@ func TestInc3(t *testing.T) {
 
 func TestRemoveItem(t *testing.T) {
 
-	host := NewHost(connectionString)
+	host := NewHost(defaultConnectionString)
 	defer host.Close()
 
 	list, err := NewList(host, listname)
