@@ -247,6 +247,11 @@ func TestHashMapUserStateShort(t *testing.T) {
 		t.Error(err)
 	}
 
+	err = hashmap.Set(username, "bb", "42")
+	if err != nil {
+		t.Error(err)
+	}
+
 	aval, err := hashmap.Get(username, "aa")
 	if err != nil {
 		t.Error(err)
@@ -254,6 +259,44 @@ func TestHashMapUserStateShort(t *testing.T) {
 	if aval != "false" {
 		t.Error("aa should be false, but it is: " + aval)
 	}
+
+	json, err := hashmap.JSON(username)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(json)
+
+	err = hashmap.SetMap(username, map[string]string{"x": "42", "y": "64"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	aval, err = hashmap.Get(username, "x")
+	if err != nil {
+		t.Error(err)
+	}
+	if aval != "42" {
+		t.Errorf("expected 42, got %s", aval)
+	}
+
+	err = hashmap.CreateIndexTable()
+	if err != nil {
+		t.Error(err)
+	}
+
+	aval, err = hashmap.Get(username, "y")
+	if err != nil {
+		t.Error(err)
+	}
+	if aval != "64" {
+		t.Errorf("expected 64, got %s", aval)
+	}
+
+	json, err = hashmap.JSON(username)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(json)
 
 	err = hashmap.Remove()
 	if err != nil {
@@ -269,7 +312,6 @@ func TestHashMapUserState(t *testing.T) {
 
 	defer host.Close()
 
-	fmt.Println("NEW HASH MAP")
 	hashmap, err := NewHashMap(host, hashmapname)
 	if err != nil {
 		t.Error(err)
@@ -278,19 +320,16 @@ func TestHashMapUserState(t *testing.T) {
 
 	username := "bob"
 
-	fmt.Println("SET")
 	err = hashmap.Set(username, "a", "true")
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println("SET")
 	err = hashmap.Set(username, "a", "false")
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println("GET")
 	aval, err := hashmap.Get(username, "a")
 	if err != nil {
 		t.Error(err)
@@ -299,25 +338,21 @@ func TestHashMapUserState(t *testing.T) {
 		t.Error("a should be false")
 	}
 
-	fmt.Println("SET")
 	err = hashmap.Set(username, "a", "true")
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println("SET")
 	err = hashmap.Set(username, "b", "true")
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println("SET")
 	err = hashmap.Set(username, "b", "true")
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println("GET")
 	aval, err = hashmap.Get(username, "a")
 	if err != nil {
 		t.Errorf("Error when retrieving element! %s", err.Error())
@@ -326,7 +361,6 @@ func TestHashMapUserState(t *testing.T) {
 		t.Error("a should be true")
 	}
 
-	fmt.Println("GET")
 	bval, err := hashmap.Get(username, "b")
 	if err != nil {
 		t.Errorf("Error when retrieving elements! %s", err.Error())
@@ -335,7 +369,6 @@ func TestHashMapUserState(t *testing.T) {
 		t.Error("b should be true")
 	}
 
-	fmt.Println("REMOVE")
 	err = hashmap.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
