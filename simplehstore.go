@@ -776,15 +776,16 @@ func (h *HashMap) JSON(owner string) (string, error) {
 	defer rows.Close()
 	var value string
 	for rows.Next() {
-		err = rows.Scan(&value)
+		if err = rows.Scan(&value); err != nil {
+			return "", err
+		}
 		if !h.host.rawUTF8 {
 			Decode(&value)
 		}
 		// Got a value, return it
 		return value, nil
 	}
-	err = rows.Err()
-	return "", err
+	return "", rows.Err()
 }
 
 // All returns all owners for all hash map elements
