@@ -161,11 +161,6 @@ func rebuildConnectionString(connectionString string, withDB bool) (string, stri
 	return buildConnectionString(username, password, hasPassword, hostname, port, "", args), ""
 }
 
-// Enclose in single quotes and escape any single quotes within
-func addSingleQuotesAndEscapeSingleQuotes(s string) string {
-	return "'" + escapeSingleQuotes(s) + "'"
-}
-
 // Escape single quotes (for keys and values)
 func escapeSingleQuotes(s string) string {
 	return strings.Replace(s, "'", "''", -1)

@@ -233,33 +233,28 @@ func TestHashMapUserStateShort(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Println("CLEAR")
 	hashmap.Clear()
 
 	username := "bob"
 
-	fmt.Println("SET")
-	err = hashmap.Set(username, "a", "true")
+	err = hashmap.Set(username, "aa", "true")
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println("SET")
-	err = hashmap.Set(username, "a", "false")
+	err = hashmap.Set(username, "aa", "false")
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println("GET")
-	aval, err := hashmap.Get(username, "a")
+	aval, err := hashmap.Get(username, "aa")
 	if err != nil {
 		t.Error(err)
 	}
 	if aval != "false" {
-		t.Error("a should be false, but it is: " + aval)
+		t.Error("aa should be false, but it is: " + aval)
 	}
 
-	fmt.Println("REMOVE")
 	err = hashmap.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
