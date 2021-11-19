@@ -563,14 +563,27 @@ func NewHashMap(host *Host, name string) (*HashMap, error) {
 }
 
 // CreateIndexTable creates an INDEX table for this hash map, that may speed up lookups
-func (h *HashMap) CreateIndexTable(owner string) error {
-	_, err := h.host.db.Exec(fmt.Sprintf("CREATE INDEX %s_idx ON %s USING GIN (attr)", owner, owner))
+func (h *HashMap) CreateIndexTable() error {
+	// strip double quotes from h.table and add _idx at the end
+	indexTableName := strings.TrimSuffix(strings.TrimPrefix(h.table, "\""), "\"") + "_idx"
+	query := fmt.Sprintf("CREATE INDEX %q ON %s USING GIN (attr)", indexTableName, h.table)
+	if Verbose {
+		fmt.Println(query)
+	}
+	_, err := h.host.db.Exec(query)
 	return err
+
 }
 
 // RemoveIndexTable removes the INDEX table for this hash map
 func (h *HashMap) RemoveIndexTable(owner string) error {
-	_, err := h.host.db.Exec(fmt.Sprintf("DROP INDEX %s_idx", owner))
+	// strip double quotes from h.table and add _idx at the end
+	indexTableName := strings.TrimSuffix(strings.TrimPrefix(h.table, "\""), "\"") + "_idx"
+	query := fmt.Sprintf("DROP INDEX %q", indexTableName)
+	if Verbose {
+		fmt.Println(query)
+	}
+	_, err := h.host.db.Exec(query)
 	return err
 }
 
@@ -747,53 +760,30 @@ func (h *HashMap) SetMap(owner string, items map[string]string) error {
 	return err
 }
 
-// GetMap retrieves several values from a hashmap given the element id (for instance a user id) and the keys (for instance []string{"password"}).
-func (h *HashMap) GetMap(owner string, keys []string) ([]string, error) {
-	var (
-		sb     strings.Builder
-		values []string
-	)
-	// Build the SQL query
-	for _, key := range keys {
-		sb.WriteString(fmt.Sprintf("SELECT attr -> '%s' FROM %s WHERE attr ? '%s' AND %s = '%s';", escapeSingleQuotes(key), h.table, ownerCol, escapeSingleQuotes(key), escapeSingleQuotes(owner)))
+func (h *HashMap) JSON(owner string) (string, error) {
+	query := fmt.Sprintf("SELECT hstore_to_json(attr) FROM %s WHERE %s = '%s'", h.table, ownerCol, escapeSingleQuotes(owner))
+	if Verbose {
+		fmt.Println(query)
 	}
-	// Execute the SQL query
-	log.Println("HashMap.GetMap: " + sb.String())
-	rows, err := h.host.db.Query(sb.String())
+	rows, err := h.host.db.Query(query)
 	if err != nil {
-		return values, err
+		return "", err
 	}
 	if rows == nil {
-		return values, errors.New("HashMap Get returned no rows for owner " + owner + " and keys " + strings.Join(keys, ", "))
+		return "", ErrNoAvailableValues
 	}
 	defer rows.Close()
-
-	// Get the values
-	var (
-		x       string
-		counter int
-	)
+	var value string
 	for rows.Next() {
-		if err := rows.Scan(&x); err != nil {
-			// No rows
-			return values, err
-		}
+		err = rows.Scan(&value)
 		if !h.host.rawUTF8 {
-			Decode(&x)
+			Decode(&value)
 		}
-		values = append(values, x)
-		counter++
+		// Got a value, return it
+		return value, nil
 	}
-	if err := rows.Err(); err != nil {
-		return values, err
-	}
-	if counter == 0 {
-		return values, errors.New("No such owner/keys: " + owner + "/" + strings.Join(keys, ", "))
-	}
-	if counter != len(keys) {
-		return values, errors.New("Found only some of the keys: " + owner + "/" + strings.Join(keys, ", "))
-	}
-	return values, nil
+	err = rows.Err()
+	return "", err
 }
 
 // All returns all owners for all hash map elements
@@ -806,6 +796,7 @@ func (h *HashMap) All() ([]string, error) {
 	if err != nil {
 		return values, err
 	}
+
 	if rows == nil {
 		return values, ErrNoAvailableValues
 	}
@@ -979,15 +970,25 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 
 // CreateIndexTable creates an INDEX table for this key/value, that may speed up lookups
 func (kv *KeyValue) CreateIndexTable() error {
-	owner := pq.QuoteIdentifier(kvPrefix + kv.table)
-	_, err := kv.host.db.Exec(fmt.Sprintf("CREATE INDEX %s_idx ON %s USING GIN (attr)", owner, owner))
+	// strip double quotes from kv.table and add _idx at the end
+	indexTableName := strings.TrimSuffix(strings.TrimPrefix(kv.table, "\""), "\"") + "_idx"
+	query := fmt.Sprintf("CREATE INDEX %q ON %s USING GIN (attr)", indexTableName, kv.table)
+	if Verbose {
+		fmt.Println(query)
+	}
+	_, err := kv.host.db.Exec(query)
 	return err
 }
 
 // RemoveIndexTable removes the INDEX table for this key/value
 func (kv *KeyValue) RemoveIndexTable() error {
-	owner := pq.QuoteIdentifier(kvPrefix + kv.table)
-	_, err := kv.host.db.Exec(fmt.Sprintf("DROP INDEX %s_idx", owner))
+	// strip double quotes from kv.table and add _idx at the end
+	indexTableName := strings.TrimSuffix(strings.TrimPrefix(kv.table, "\""), "\"") + "_idx"
+	query := fmt.Sprintf("DROP INDEX %q", indexTableName)
+	if Verbose {
+		fmt.Println(query)
+	}
+	_, err := kv.host.db.Exec(query)
 	return err
 }
 
