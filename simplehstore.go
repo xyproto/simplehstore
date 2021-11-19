@@ -593,13 +593,11 @@ func (h *HashMap) Set(owner, key, value string) error {
 		Encode(&value)
 	}
 	encodedValue := value
-
 	// First try updating the key/values
 	n, err := h.update(owner, key, encodedValue)
 	if err != nil {
 		return err
 	}
-
 	// If no rows are affected (SELECTED) by the update, try inserting a row instead
 	if n == 0 {
 		n, err = h.insert(owner, key, encodedValue)
@@ -610,9 +608,35 @@ func (h *HashMap) Set(owner, key, value string) error {
 			return errors.New("could not update or insert any rows")
 		}
 	}
-
 	// success
 	return nil
+}
+
+// SetCheck will set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
+// Returns true if the key already existed.
+func (h *HashMap) SetCheck(owner, key, value string) (bool, error) {
+	if !h.host.rawUTF8 {
+		Encode(&value)
+	}
+	encodedValue := value
+	// First try updating the key/values
+	n, err := h.update(owner, key, encodedValue)
+	if err != nil {
+		return false, err
+	}
+	// If no rows are affected (SELECTED) by the update, try inserting a row instead
+	if n == 0 {
+		n, err = h.insert(owner, key, encodedValue)
+		if err != nil {
+			return false, err
+		}
+		if n == 0 {
+			return false, errors.New("could not update or insert any rows")
+		}
+		return false, nil
+	}
+	// success, and the key already existed
+	return true, nil
 }
 
 // insert a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")

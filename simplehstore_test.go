@@ -247,9 +247,18 @@ func TestHashMapUserStateShort(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = hashmap.Set(username, "bb", "42")
+	err = hashmap.Set(username, "bb", "82")
 	if err != nil {
 		t.Error(err)
+	}
+
+	var existed bool
+	existed, err = hashmap.SetCheck(username, "bb", "42")
+	if err != nil {
+		t.Error(err)
+	}
+	if !existed {
+		t.Error("got wrong bool, the key already existed")
 	}
 
 	aval, err := hashmap.Get(username, "aa")
