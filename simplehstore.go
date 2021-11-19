@@ -760,8 +760,9 @@ func (h *HashMap) SetMap(owner string, items map[string]string) error {
 	return err
 }
 
+// JSON returns the first found hstore value for the given key as a JSON string
 func (h *HashMap) JSON(owner string) (string, error) {
-	query := fmt.Sprintf("SELECT hstore_to_json(attr) FROM %s WHERE %s = '%s'", h.table, ownerCol, escapeSingleQuotes(owner))
+	query := fmt.Sprintf("SELECT hstore_to_json(hstore(array_agg(altering_pairs))) FROM %s, LATERAL unnest(hstore_to_array(attr)) altering_pairs WHERE %s = '%s'", h.table, ownerCol, escapeSingleQuotes(owner))
 	if Verbose {
 		fmt.Println(query)
 	}
