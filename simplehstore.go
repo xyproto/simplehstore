@@ -589,37 +589,60 @@ func (h *HashMap) RemoveIndexTable(owner string) error {
 
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (h *HashMap) Set(owner, key, value string) error {
-	// See if the owner and key already exists
-	hasKey, err := h.Has(owner, key)
-	if err != nil {
-		return err
-	}
-	if Verbose {
-		log.Printf("%s/%s exists? %v\n", owner, key, hasKey)
-	}
 	if !h.host.rawUTF8 {
 		Encode(&value)
 	}
-	if hasKey {
-		query := fmt.Sprintf("UPDATE %s SET attr = attr || '%q=>%q' :: hstore WHERE %s = '%s' AND attr ? '%s'", h.table, escapeSingleQuotes(key), escapeSingleQuotes(value), ownerCol, escapeSingleQuotes(owner), escapeSingleQuotes(key))
-		if Verbose {
-			fmt.Println(query)
+	encodedValue := value
+
+	// First try updating the key/values
+	n, err := h.update(owner, key, encodedValue)
+	if err != nil {
+		return err
+	}
+
+	// If no rows are affected (SELECTED) by the update, try inserting a row instead
+	if n == 0 {
+		n, err = h.insert(owner, key, encodedValue)
+		if err != nil {
+			return err
 		}
-		_, err = h.host.db.Exec(query)
-		if Verbose {
-			log.Println("Updated HSTORE table: " + h.table)
-		}
-	} else {
-		query := fmt.Sprintf("INSERT INTO %s (%s, attr) VALUES ('%s', '\"%s\"=>\"%s\"')", h.table, ownerCol, escapeSingleQuotes(owner), escapeSingleQuotes(key), escapeSingleQuotes(value))
-		if Verbose {
-			fmt.Println(query)
-		}
-		_, err = h.host.db.Exec(query)
-		if Verbose {
-			log.Println("Added to HSTORE table: " + h.table)
+		if n == 0 {
+			return errors.New("could not update or insert any rows")
 		}
 	}
-	return err
+
+	// success
+	return nil
+}
+
+// insert a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
+func (h *HashMap) insert(owner, key, encodedValue string) (int64, error) {
+	// Try inserting
+	query := fmt.Sprintf("INSERT INTO %s (%s, attr) VALUES ('%s', '\"%s\"=>\"%s\"') ON CONFLICT DO NOTHING", h.table, ownerCol, escapeSingleQuotes(owner), escapeSingleQuotes(key), escapeSingleQuotes(encodedValue))
+	if Verbose {
+		fmt.Println(query)
+	}
+	result, err := h.host.db.Exec(query)
+	if Verbose {
+		log.Println("Inserted row into: "+h.table+" err? ", err)
+	}
+	n, _ := result.RowsAffected()
+	return n, err
+}
+
+// update a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
+func (h *HashMap) update(owner, key, encodedValue string) (int64, error) {
+	// Try updating
+	query := fmt.Sprintf("UPDATE %s SET attr = attr || '%q=>%q' :: hstore WHERE %s = '%s' AND attr ? '%s'", h.table, escapeSingleQuotes(key), escapeSingleQuotes(encodedValue), ownerCol, escapeSingleQuotes(owner), escapeSingleQuotes(key))
+	if Verbose {
+		fmt.Println(query)
+	}
+	result, err := h.host.db.Exec(query)
+	if Verbose {
+		log.Println("Updated row in: "+h.table+" err? ", err)
+	}
+	n, _ := result.RowsAffected()
+	return n, err
 }
 
 // Get a value from a hashmap given the element id (for instance a user id) and the key (for instance "password").
@@ -775,7 +798,7 @@ func (h *HashMap) JSON(owner string) (string, error) {
 	}
 	defer rows.Close()
 	var value string
-	for rows.Next() {
+	if rows.Next() {
 		if err = rows.Scan(&value); err != nil {
 			return "", err
 		}
