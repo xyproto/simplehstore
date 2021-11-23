@@ -1,0 +1,127 @@
+package simplehstore
+
+import (
+	"errors"
+	"fmt"
+	"log"
+	"strings"
+
+	"github.com/lib/pq"
+)
+
+// NewSet creates a new set
+func NewSet(host *Host, name string) (*Set, error) {
+	s := &Set{host, pq.QuoteIdentifier(name)} // name is the name of the table
+	// list is the name of the column
+	if _, err := s.host.db.Exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s %s)", s.table, setCol, defaultStringType)); err != nil {
+		if !strings.HasSuffix(err.Error(), "already exists") {
+			return nil, err
+		}
+	}
+	if Verbose {
+		log.Println("Created table " + s.table + " in database " + host.dbname)
+	}
+	return s, nil
+}
+
+// Add an element to the set
+func (s *Set) Add(value string) error {
+	originalValue := value
+	if !s.host.rawUTF8 {
+		Encode(&value)
+	}
+	// Check that the value is not already there before adding
+	has, err := s.Has(originalValue)
+	if !has && (err == nil) {
+		_, err = s.host.db.Exec(fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", s.table, setCol), value)
+	}
+	return err
+}
+
+// Has checks if the given value is in the set
+func (s *Set) Has(value string) (bool, error) {
+	if !s.host.rawUTF8 {
+		Encode(&value)
+	}
+	rows, err := s.host.db.Query(fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", setCol, s.table, setCol), value)
+	if err != nil {
+		return false, err
+	}
+	if rows == nil {
+		return false, errors.New("Set Has returned no rows for value " + value)
+	}
+	defer rows.Close()
+	var scanValue string
+	// Get the value. Should not loop more than once.
+	counter := 0
+	for rows.Next() {
+		err = rows.Scan(&scanValue)
+		if err != nil {
+			// No rows
+			return false, err
+		}
+		counter++
+	}
+	if err := rows.Err(); err != nil {
+		return false, err
+	}
+	if counter > 1 {
+		// Should never happen
+		return false, errors.New("Duplicate keys in set for value " + value + "!")
+	}
+	return counter > 0, nil
+}
+
+// All returns all elements in the set
+func (s *Set) All() ([]string, error) {
+	var (
+		values []string
+		value  string
+	)
+	rows, err := s.host.db.Query(fmt.Sprintf("SELECT DISTINCT %s FROM %s", setCol, s.table))
+	if err != nil {
+		return values, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err = rows.Scan(&value)
+		if !s.host.rawUTF8 {
+			Decode(&value)
+		}
+		values = append(values, value)
+		if err != nil {
+			return values, err
+		}
+	}
+	err = rows.Err()
+	return values, err
+}
+
+// GetAll is deprecated in favor of All
+func (s *Set) GetAll() ([]string, error) {
+	return s.All()
+}
+
+// Del removes an element from the set
+func (s *Set) Del(value string) error {
+	if !s.host.rawUTF8 {
+		Encode(&value)
+	}
+	// Remove a value from the table
+	_, err := s.host.db.Exec(fmt.Sprintf("DELETE FROM %s WHERE %s = '%s'", s.table, setCol, value))
+	return err
+}
+
+// Remove this set
+func (s *Set) Remove() error {
+	// Remove the table
+	_, err := s.host.db.Exec(fmt.Sprintf("DROP TABLE %s", s.table))
+	return err
+}
+
+// Clear the list contents
+func (s *Set) Clear() error {
+	// Clear the table
+	_, err := s.host.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s", s.table))
+	return err
+}
