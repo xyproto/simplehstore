@@ -17,7 +17,7 @@ import (
 
 const (
 	// Version number. Stable API within major version numbers.
-	Version = 2.14
+	Version = 2.15
 
 	defaultStringType = "TEXT"
 	defaultPort       = 5432
