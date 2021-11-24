@@ -279,8 +279,15 @@ func TestConfirmed(t *testing.T) {
 		t.Error(err)
 	}
 	defer users.Remove()
-	users.Set("bob", "confirmed", "true")
 	ok, err := users.Exists("bob")
+	if err != nil {
+		t.Error(err)
+	}
+	if ok {
+		t.Error("bob should not exist!")
+	}
+	users.Set("bob", "confirmed", "true")
+	ok, err = users.Exists("bob")
 	if err != nil {
 		t.Error(err)
 	}

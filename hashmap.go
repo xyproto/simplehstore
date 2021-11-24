@@ -225,32 +225,27 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 // Exists checks if a given owner exists as a hash map at all
 func (h *HashMap) Exists(owner string) (bool, error) {
 	query := fmt.Sprintf("SELECT attr FROM %s WHERE %s = '%s'", h.table, ownerCol, escapeSingleQuotes(owner))
-	if Verbose {
-		fmt.Println(query)
-	}
 	rows, err := h.host.db.Query(query)
 	if err != nil {
 		return false, err
 	}
 	if rows == nil {
-		return false, errors.New("HashMap Exists returned no rows for owner " + owner)
+		return false, nil // no rows
 	}
 	defer rows.Close()
 	var value sql.NullString
-	// Get the value. Should only loop once.
 	counter := 0
-	for rows.Next() {
+	if rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
-			// No rows
-			return false, err
+			return false, err // no rows
 		}
 		counter++
 	}
 	if err := rows.Err(); err != nil {
 		return false, err
 	}
-	return counter > 0, nil
+	return counter > 0, nil // found at least one row
 }
 
 // SetMap is like Set, except that it can set many key+value pairs with one SQL query,
@@ -379,21 +374,21 @@ func (h *HashMap) AllWhere(key, value string) ([]string, error) {
 
 // Count counts the number of owners for hash map elements
 func (h *HashMap) Count() (int, error) {
-	value := -1
+	var value sql.NullInt64
 	rows, err := h.host.db.Query(fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT %s FROM %s) as temp", ownerCol, h.table))
 	if err != nil {
-		return value, err
+		return 0, err
 	}
 	if rows == nil {
-		return value, ErrNoAvailableValues
+		return 0, ErrNoAvailableValues
 	}
 	defer rows.Close()
 	rows.Next()
 	err = rows.Scan(&value)
 	if err != nil {
-		return value, err
+		return 0, err
 	}
-	return value, nil
+	return int(value.Int64), nil
 }
 
 // GetAll is deprecated in favor of All
