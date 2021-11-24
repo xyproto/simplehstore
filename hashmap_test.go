@@ -32,11 +32,6 @@ func TestHashMapUserStateShort(t *testing.T) {
 
 	username := "bob"
 
-	err = hashmap.SetMap(username, map[string]string{"x": "42", "y": "64"})
-	if err != nil {
-		t.Error(err)
-	}
-
 	err = hashmap.Set(username, "aa", "true")
 	if err != nil {
 		t.Error(err)
@@ -75,35 +70,9 @@ func TestHashMapUserStateShort(t *testing.T) {
 	}
 	fmt.Println(json)
 
-	err = hashmap.SetMap(username, map[string]string{"x": "42", "y": "64"})
-	if err != nil {
-		t.Error(err)
-	}
-
-	err = hashmap.SetMap(username, map[string]string{"x": "42", "y": "64"})
-	if err != nil {
-		t.Error(err)
-	}
-
-	aval, err = hashmap.Get(username, "x")
-	if err != nil {
-		t.Error(err)
-	}
-	if aval != "42" {
-		t.Errorf("expected 42, got %s", aval)
-	}
-
 	err = hashmap.CreateIndexTable()
 	if err != nil {
 		t.Error(err)
-	}
-
-	aval, err = hashmap.Get(username, "y")
-	if err != nil {
-		t.Error(err)
-	}
-	if aval != "64" {
-		t.Errorf("expected 64, got %s", aval)
 	}
 
 	json, err = hashmap.json(username)
