@@ -21,38 +21,38 @@ func TestSet(t *testing.T) {
 	}
 	set.Clear()
 	if err := set.Add(testdata1); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
+		t.Errorf("Error, could not add item to set! %s", err)
 	}
 	items, err := set.All()
 	if err != nil {
-		t.Errorf("Error when retrieving set! %s", err.Error())
+		t.Errorf("Error when retrieving set! %s", err)
 	}
 	if len(items) != 1 {
-		t.Errorf("Error, wrong set length! %v", len(items))
+		t.Errorf("Error, wrong set length! %d", len(items))
 	}
 	if (len(items) > 0) && (items[0] != testdata1) {
 		t.Errorf("Error, wrong set contents! %v", items)
 	}
 	if err := set.Add(testdata2); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
+		t.Errorf("Error, could not add item to set! %s", err)
 	}
 	if err := set.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
+		t.Errorf("Error, could not add item to set! %s", err)
 	}
 	// Add an element twice. This is a set, so the element should only appear once.
 	if err := set.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
+		t.Errorf("Error, could not add item to set! %s", err)
 	}
 	items, err = set.All()
 	if err != nil {
-		t.Errorf("Error when retrieving set! %s", err.Error())
+		t.Errorf("Error when retrieving set! %s", err)
 	}
 	if len(items) != 3 {
-		t.Errorf("Error, wrong set length! %v\n%v\n", len(items), items)
+		t.Errorf("Error, wrong set length! %d\n%v\n", len(items), items)
 	}
 	err = set.Remove()
 	if err != nil {
-		t.Errorf("Error, could not remove set! %s", err.Error())
+		t.Errorf("Error, could not remove set! %s", err)
 	}
 
 	// Check that set qualifies for the ISet interface
@@ -72,38 +72,38 @@ func TestRawSet(t *testing.T) {
 	}
 	set.Clear()
 	if err := set.Add(testdata1); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
+		t.Errorf("Error, could not add item to set! %s", err)
 	}
 	items, err := set.All()
 	if err != nil {
-		t.Errorf("Error when retrieving set! %s", err.Error())
+		t.Errorf("Error when retrieving set! %s", err)
 	}
 	if len(items) != 1 {
-		t.Errorf("Error, wrong set length! %v", len(items))
+		t.Errorf("Error, wrong set length! %d", len(items))
 	}
 	if (len(items) > 0) && (items[0] != testdata1) {
 		t.Errorf("Error, wrong set contents! %v", items)
 	}
 	if err := set.Add(testdata2); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
+		t.Errorf("Error, could not add item to set! %s", err)
 	}
 	if err := set.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
+		t.Errorf("Error, could not add item to set! %s", err)
 	}
 	// Add an element twice. This is a set, so the element should only appear once.
 	if err := set.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
+		t.Errorf("Error, could not add item to set! %s", err)
 	}
 	items, err = set.All()
 	if err != nil {
-		t.Errorf("Error when retrieving set! %s", err.Error())
+		t.Errorf("Error when retrieving set! %s", err)
 	}
 	if len(items) != 3 {
-		t.Errorf("Error, wrong set length! %v\n%v\n", len(items), items)
+		t.Errorf("Error, wrong set length! %d\n%v\n", len(items), items)
 	}
 	err = set.Remove()
 	if err != nil {
-		t.Errorf("Error, could not remove set! %s", err.Error())
+		t.Errorf("Error, could not remove set! %s", err)
 	}
 
 	// Check that set qualifies for the ISet interface
