@@ -32,6 +32,11 @@ func TestHashMapUserStateShort(t *testing.T) {
 
 	username := "bob"
 
+	err = hashmap.SetMap(username, map[string]string{"x": "42", "y": "64"})
+	if err != nil {
+		t.Error(err)
+	}
+
 	err = hashmap.Set(username, "aa", "true")
 	if err != nil {
 		t.Error(err)
@@ -75,6 +80,11 @@ func TestHashMapUserStateShort(t *testing.T) {
 		t.Error(err)
 	}
 
+	err = hashmap.SetMap(username, map[string]string{"x": "42", "y": "64"})
+	if err != nil {
+		t.Error(err)
+	}
+
 	aval, err = hashmap.Get(username, "x")
 	if err != nil {
 		t.Error(err)
@@ -104,7 +114,7 @@ func TestHashMapUserStateShort(t *testing.T) {
 
 	err = hashmap.Remove()
 	if err != nil {
-		t.Errorf("Error, could not remove hashmap! %s", err.Error())
+		t.Errorf("Error, could not remove hashmap! %s", err)
 	}
 }
 
@@ -159,7 +169,7 @@ func TestHashMapUserState(t *testing.T) {
 
 	aval, err = hashmap.Get(username, "a")
 	if err != nil {
-		t.Errorf("Error when retrieving element! %s", err.Error())
+		t.Errorf("Error when retrieving element! %s", err)
 	}
 	if aval != "true" {
 		t.Error("a should be true")
@@ -167,7 +177,7 @@ func TestHashMapUserState(t *testing.T) {
 
 	bval, err := hashmap.Get(username, "b")
 	if err != nil {
-		t.Errorf("Error when retrieving elements! %s", err.Error())
+		t.Errorf("Error when retrieving elements! %s", err)
 	}
 	if bval != "true" {
 		t.Error("b should be true")
@@ -175,7 +185,7 @@ func TestHashMapUserState(t *testing.T) {
 
 	err = hashmap.Remove()
 	if err != nil {
-		t.Errorf("Error, could not remove hashmap! %s", err.Error())
+		t.Errorf("Error, could not remove hashmap! %s", err)
 	}
 
 }
@@ -236,11 +246,11 @@ func TestHashStorage(t *testing.T) {
 	value := string(passwordHash)
 
 	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 	item, err := hashmap.Get(username, key)
 	if err != nil {
-		t.Errorf("Unable to retrieve from hashmap! %s\n", err.Error())
+		t.Errorf("Unable to retrieve from hashmap! %s\n", err)
 	}
 	if item != value {
 		t.Errorf("Error, got a different value back (bcrypt)! %s != %s\n", value, item)
@@ -254,11 +264,11 @@ func TestHashStorage(t *testing.T) {
 	value = string(passwordHash)
 
 	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 	item, err = hashmap.Get(username, key)
 	if err != nil {
-		t.Errorf("Unable to retrieve from hashmap! %s\n", err.Error())
+		t.Errorf("Unable to retrieve from hashmap! %s\n", err)
 	}
 	if item != value {
 		t.Errorf("Error, got a different value back (sha256)! %s != %s\n", value, item)
@@ -266,7 +276,7 @@ func TestHashStorage(t *testing.T) {
 
 	err = hashmap.Remove()
 	if err != nil {
-		t.Errorf("Error, could not remove hashmap! %s", err.Error())
+		t.Errorf("Error, could not remove hashmap! %s", err)
 	}
 }
 
@@ -334,11 +344,11 @@ func TestHashMapUserState2(t *testing.T) {
 	// Get key that doesn't exist yet
 	_, err = hashmap.Get("ownerblabla", "keyblabla")
 	if err == nil {
-		t.Errorf("Key found, when it should be missing! %s", err.Error())
+		t.Errorf("Key found, when it should be missing! %s", err)
 	}
 
 	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 
 	hashmap.Remove()
@@ -364,56 +374,52 @@ func TestHashMap(t *testing.T) {
 	// Get key that doesn't exist yet
 	_, err = hashmap.Get("ownerblabla", "keyblabla")
 	if err == nil {
-		t.Errorf("Key found, when it should be missing! %s", err.Error())
+		t.Errorf("Key found, when it should be missing! %s", err)
 	}
 
 	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 
 	// Once more, with the same data
 	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 
 	items, err := hashmap.All()
 	if err != nil {
-		t.Errorf("Error when retrieving elements! %s", err.Error())
+		t.Errorf("Error when retrieving elements! %s", err)
 	}
 	if len(items) != 1 {
-		t.Errorf("Error, wrong element length! %v", len(items))
+		t.Errorf("Error, wrong element length! %d", len(items))
 	}
 
 	// Add one more item, so that there are 2 entries in the database
 	if err := hashmap.Set("bob", "number", "42"); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 
 	// Add one more item, so that there are 3 entries in the database,
 	// two with owner "bob" and 1 with owner "alice"
 	if err := hashmap.Set("alice", "number", "42"); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 
 	// Retrieve items again and check the length
 	items, err = hashmap.All()
 	if err != nil {
-		t.Errorf("Error, could not retrieve all items! %s", err.Error())
+		t.Errorf("Error, could not retrieve all items! %s", err)
 	}
 	if len(items) != 2 {
 		for i, item := range items {
 			fmt.Printf("ITEM %d IS %v\n", i, item)
 		}
-		t.Errorf("Error, wrong element length! %v", len(items))
+		t.Errorf("Error, wrong element length! %d", len(items))
 	}
-
-	//if (len(items) > 0) && (items[0] != username) {
-	//	t.Errorf("Error, wrong elementid! %v", items)
-	//}
 
 	item, err := hashmap.Get(username, key)
 	if err != nil {
-		t.Errorf("Error, could not fetch value from hashmap! %s", err.Error())
+		t.Errorf("Error, could not fetch value from hashmap! %s", err)
 	}
 	if item != value {
 		t.Errorf("Error, expected %s, got %s!", value, item)
@@ -462,7 +468,7 @@ func TestHashMap(t *testing.T) {
 
 	err = hashmap.Remove()
 	if err != nil {
-		t.Errorf("Error, could not remove hashmap! %s", err.Error())
+		t.Errorf("Error, could not remove hashmap! %s", err)
 	}
 
 	// Check that hashmap qualifies for the IHashMap interface
@@ -489,28 +495,28 @@ func TestDashesAndQuotes(t *testing.T) {
 	// Get key that doesn't exist yet
 	_, err = hashmap.Get("ownerblabla", "keyblabla")
 	if err == nil {
-		t.Errorf("Key found, when it should be missing! %s", err.Error())
+		t.Errorf("Key found, when it should be missing! %s", err)
 	}
 
 	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 	// Once more, with the same data
 	if err := hashmap.Set(username, key, value); err != nil {
-		t.Errorf("Error, could not set value in hashmap! %s", err.Error())
+		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 	if _, err := hashmap.All(); err != nil {
-		t.Errorf("Error when retrieving elements! %s", err.Error())
+		t.Errorf("Error when retrieving elements! %s", err)
 	}
 	item, err := hashmap.Get(username, key)
 	if err != nil {
-		t.Errorf("Error, could not fetch value from hashmap! %s", err.Error())
+		t.Errorf("Error, could not fetch value from hashmap! %s", err)
 	}
 	if item != value {
 		t.Errorf("Error, expected %s, got %s!", value, item)
 	}
 	err = hashmap.Remove()
 	if err != nil {
-		t.Errorf("Error, could not remove hashmap! %s", err.Error())
+		t.Errorf("Error, could not remove hashmap! %s", err)
 	}
 }
