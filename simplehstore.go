@@ -41,21 +41,6 @@ type dbDatastructure struct {
 	table string
 }
 
-type (
-	// List is a list of strings, stored in PostgreSQL
-	List dbDatastructure
-
-	// Set is a set of strings, stored in PostgreSQL
-	Set dbDatastructure
-
-	// HashMap is a hash map with a name, key and value, stored in PostgreSQL
-	// Useful when storing several keys and values for a specific username, for instance.
-	HashMap dbDatastructure
-
-	// KeyValue is a hash map with a key and a value, stored in PostgreSQL
-	KeyValue dbDatastructure
-)
-
 var defaultConnectionString = func() string {
 	password := env.Str("POSTGRES_PASSWORD")
 	s := env.Str("POSTGRES_USER", "postgres")
