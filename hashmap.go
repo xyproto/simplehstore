@@ -248,41 +248,6 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 	return counter > 0, nil // found at least one row
 }
 
-// SetMap is like Set, except that it can set many key+value pairs with one SQL query,
-// and it does not check if each key exists first.
-func (h *HashMap) SetMap(owner string, items map[string]string) error {
-	var (
-		shouldEncode = !h.host.rawUTF8
-		sb           strings.Builder
-	)
-
-	existingKeysForOwner, err := h.Keys(owner)
-	if err != nil {
-		return err
-	}
-
-	// Build the SQL expression
-	for key, value := range items {
-		if shouldEncode {
-			Encode(&value)
-		}
-		// TODO: Set many attributes in one UPDATE or INSERT instead, several hstore keys/values.
-		// TODO: Check if just UPDATE-ing without checking first works just as well.
-		if hasString(existingKeysForOwner, key) {
-			sb.WriteString(fmt.Sprintf("UPDATE %s SET attr = attr || '%q=>%q' :: hstore WHERE attr ? '%s' AND %s = '%s';", h.table, escapeSingleQuotes(key), escapeSingleQuotes(value), ownerCol, escapeSingleQuotes(key), escapeSingleQuotes(owner)))
-		} else {
-			sb.WriteString(fmt.Sprintf("INSERT INTO %s (%s, attr) VALUES ('%s', '%q=>%q');", h.table, ownerCol, escapeSingleQuotes(owner), escapeSingleQuotes(key), escapeSingleQuotes(value)))
-		}
-	}
-
-	// Execute the SQL expression
-	_, err = h.host.db.Exec(sb.String())
-	if Verbose {
-		log.Println("Updated and/or added to HSTORE table: " + h.table)
-	}
-	return err
-}
-
 // json returns the first found hstore value for the given key as a JSON string
 func (h *HashMap) json(owner string) (string, error) {
 	query := fmt.Sprintf("SELECT hstore_to_json(hstore(array_agg(altering_pairs))) FROM %s, LATERAL unnest(hstore_to_array(attr)) altering_pairs WHERE %s = '%s'", h.table, ownerCol, escapeSingleQuotes(owner))
