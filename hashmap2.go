@@ -180,6 +180,11 @@ func (hm2 *HashMap2) Count() (int, error) {
 	return hm2.OwnerSet().Count()
 }
 
+// CountInt64 counts the number of owners for hash map elements (int64)
+func (hm2 *HashMap2) CountInt64() (int64, error) {
+	return hm2.OwnerSet().CountInt64()
+}
+
 // DelKey removes a key of an owner in a hashmap (for instance the email field for a user)
 func (hm2 *HashMap2) DelKey(owner, key string) error {
 	return hm2.KeyValue().Del(owner + fieldSep + key)

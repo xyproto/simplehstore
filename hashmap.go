@@ -374,6 +374,25 @@ func (h *HashMap) AllWhere(key, value string) ([]string, error) {
 
 // Count counts the number of owners for hash map elements
 func (h *HashMap) Count() (int, error) {
+	var value sql.NullInt32
+	rows, err := h.host.db.Query(fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT %s FROM %s) as temp", ownerCol, h.table))
+	if err != nil {
+		return 0, err
+	}
+	if rows == nil {
+		return 0, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	rows.Next()
+	err = rows.Scan(&value)
+	if err != nil {
+		return 0, err
+	}
+	return int(value.Int32), nil
+}
+
+// CountInt64 counts the number of owners for hash map elements
+func (h *HashMap) CountInt64() (int64, error) {
 	var value sql.NullInt64
 	rows, err := h.host.db.Query(fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT %s FROM %s) as temp", ownerCol, h.table))
 	if err != nil {
@@ -388,7 +407,7 @@ func (h *HashMap) Count() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int(value.Int64), nil
+	return value.Int64, nil
 }
 
 // GetAll is deprecated in favor of All

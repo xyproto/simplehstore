@@ -178,6 +178,26 @@ func (l *List) Clear() error {
 
 // Count counts the number of elements in this list
 func (l *List) Count() (int, error) {
+	var value sql.NullInt32
+	rows, err := l.host.db.Query(fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT %s FROM %s) as temp", ownerCol, l.table))
+	if err != nil {
+		return 0, err
+	}
+	if rows == nil {
+		return 0, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return int(value.Int32), nil
+}
+
+// CountInt64 counts the number of elements in this list (int64)
+func (l *List) CountInt64() (int64, error) {
 	var value sql.NullInt64
 	rows, err := l.host.db.Query(fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT %s FROM %s) as temp", ownerCol, l.table))
 	if err != nil {
@@ -193,5 +213,5 @@ func (l *List) Count() (int, error) {
 			return 0, err
 		}
 	}
-	return int(value.Int64), nil
+	return value.Int64, nil
 }
