@@ -10,15 +10,6 @@ import (
 // Verbose can be set to true when testing, for more information
 var Verbose = false
 
-func hasString(xs []string, x string) bool {
-	for _, e := range xs {
-		if e == x {
-			return true
-		}
-	}
-	return false
-}
-
 // twoFields splits a string into two parts, given a delimiter.
 // If it works out, the two parts are returned, together with "true".
 // The delimiter must exist exactly once.
