@@ -1,12 +1,16 @@
 package simplehstore
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/lib/pq"
 )
+
+// List is a list of strings, stored in PostgreSQL
+type List dbDatastructure
 
 // NewList creates a new List. Lists are ordered.
 func NewList(host *Host, name string) (*List, error) {
@@ -35,7 +39,7 @@ func (l *List) Add(value string) error {
 func (l *List) All() ([]string, error) {
 	var (
 		values []string
-		value  string
+		value  sql.NullString
 	)
 	rows, err := l.host.db.Query(fmt.Sprintf("SELECT %s FROM %s ORDER BY id", listCol, l.table))
 	if err != nil {
@@ -47,10 +51,11 @@ func (l *List) All() ([]string, error) {
 	defer rows.Close()
 	for rows.Next() {
 		err = rows.Scan(&value)
+		s := value.String
 		if !l.host.rawUTF8 {
-			Decode(&value)
+			Decode(&s)
 		}
-		values = append(values, value)
+		values = append(values, s)
 		if err != nil {
 			return values, err
 		}
@@ -78,31 +83,32 @@ func (l *List) GetAll() ([]string, error) {
 
 // Last retrieves the last element of a list
 func (l *List) Last() (string, error) {
-	var value string
+	var value sql.NullString
 	// Fetches the item with the largest id.
 	// Faster than "ORDER BY id DESC limit 1" for large tables.
 	rows, err := l.host.db.Query(fmt.Sprintf("SELECT %s FROM %s WHERE id = (SELECT MAX(id) FROM %s)", listCol, l.table, l.table))
 	if err != nil {
-		return value, err
+		return "", err
 	}
 	if rows == nil {
-		return value, ErrNoAvailableValues
+		return "", ErrNoAvailableValues
 	}
 	defer rows.Close()
 	// Get the value. Will only loop once.
 	for rows.Next() {
 		err = rows.Scan(&value)
 		if err != nil {
-			return value, err
+			return "", err
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return value, err
+		return "", err
 	}
+	s := value.String
 	if !l.host.rawUTF8 {
-		Decode(&value)
+		Decode(&s)
 	}
-	return value, nil
+	return s, nil
 }
 
 // GetLast is deprecated in favor of Last
@@ -168,4 +174,24 @@ func (l *List) Clear() error {
 	// Clear the table
 	_, err := l.host.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s", l.table))
 	return err
+}
+
+// Count counts the number of elements in this list
+func (l *List) Count() (int, error) {
+	var value sql.NullInt64
+	rows, err := l.host.db.Query(fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT %s FROM %s) as temp", ownerCol, l.table))
+	if err != nil {
+		return 0, err
+	}
+	if rows == nil {
+		return 0, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return int(value.Int64), nil
 }
