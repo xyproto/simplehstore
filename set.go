@@ -1,6 +1,8 @@
 package simplehstore
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -8,6 +10,9 @@ import (
 
 	"github.com/lib/pq"
 )
+
+// Set is a set of strings, stored in PostgreSQL
+type Set dbDatastructure
 
 // NewSet creates a new set
 func NewSet(host *Host, name string) (*Set, error) {
@@ -38,6 +43,20 @@ func (s *Set) Add(value string) error {
 	return err
 }
 
+// add an element to the set, as part of a transaction
+func (s *Set) addWithTransaction(ctx context.Context, transaction *sql.Tx, value string) error {
+	originalValue := value
+	if !s.host.rawUTF8 {
+		Encode(&value)
+	}
+	// Check that the value is not already there before adding
+	has, err := s.Has(originalValue)
+	if !has && (err == nil) {
+		_, err = transaction.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", s.table, setCol), value)
+	}
+	return err
+}
+
 // Has checks if the given value is in the set
 func (s *Set) Has(value string) (bool, error) {
 	if !s.host.rawUTF8 {
@@ -51,7 +70,7 @@ func (s *Set) Has(value string) (bool, error) {
 		return false, errors.New("Set Has returned no rows for value " + value)
 	}
 	defer rows.Close()
-	var scanValue string
+	var scanValue sql.NullString
 	// Get the value. Should not loop more than once.
 	counter := 0
 	for rows.Next() {
@@ -124,4 +143,24 @@ func (s *Set) Clear() error {
 	// Clear the table
 	_, err := s.host.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s", s.table))
 	return err
+}
+
+// Count counts the number of elements in this list
+func (s *Set) Count() (int, error) {
+	var value sql.NullInt64
+	rows, err := s.host.db.Query(fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT %s FROM %s) as temp", setCol, s.table))
+	if err != nil {
+		return 0, err
+	}
+	if rows == nil {
+		return 0, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return int(value.Int64), nil
 }
