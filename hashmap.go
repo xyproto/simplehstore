@@ -1,6 +1,7 @@
 package simplehstore
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -9,15 +10,16 @@ import (
 	"github.com/lib/pq"
 )
 
+// HashMap is a hash map with a name, key and value, stored in PostgreSQL
+// Useful when storing several keys and values for a specific username, for instance.
+type HashMap dbDatastructure
+
 // NewHashMap creates a new HashMap struct
 func NewHashMap(host *Host, name string) (*HashMap, error) {
 	h := &HashMap{host, pq.QuoteIdentifier(name)}
 
 	// Create extension hstore
 	query := "CREATE EXTENSION hstore"
-	if Verbose {
-		fmt.Println(query)
-	}
 	// Ignore errors if hstore is already enabled
 	h.host.db.Exec(query)
 
@@ -113,6 +115,9 @@ func (h *HashMap) update(owner, key, encodedValue string) (int64, error) {
 	if Verbose {
 		log.Println("Updated row in: "+h.table+" err? ", err)
 	}
+	if result == nil {
+		return 0, fmt.Errorf("no result when trying to update %s -> %s with a value", owner, key)
+	}
 	n, _ := result.RowsAffected()
 	return n, err
 }
@@ -158,7 +163,7 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 		return "", errors.New("HashMap Get returned no rows for owner " + owner + " and key " + key)
 	}
 	defer rows.Close()
-	var value string
+	var value sql.NullString
 	// Get the value. Should only loop once.
 	counter := 0
 	for rows.Next() {
@@ -175,10 +180,11 @@ func (h *HashMap) Get(owner, key string) (string, error) {
 	if counter == 0 {
 		return "", errors.New("No such owner/key: " + owner + "/" + key)
 	}
+	s := value.String
 	if !h.host.rawUTF8 {
-		Decode(&value)
+		Decode(&s)
 	}
-	return value, nil
+	return s, nil
 }
 
 // Has checks if a given owner + key exists in the hash map
@@ -195,7 +201,7 @@ func (h *HashMap) Has(owner, key string) (bool, error) {
 		return false, errors.New("HashMap Has returned no rows for owner " + owner)
 	}
 	defer rows.Close()
-	var value string
+	var value sql.NullString
 	// Get the value. Should only loop once.
 	counter := 0
 	for rows.Next() {
@@ -230,7 +236,7 @@ func (h *HashMap) Exists(owner string) (bool, error) {
 		return false, errors.New("HashMap Exists returned no rows for owner " + owner)
 	}
 	defer rows.Close()
-	var value string
+	var value sql.NullString
 	// Get the value. Should only loop once.
 	counter := 0
 	for rows.Next() {
@@ -282,8 +288,8 @@ func (h *HashMap) SetMap(owner string, items map[string]string) error {
 	return err
 }
 
-// JSON returns the first found hstore value for the given key as a JSON string
-func (h *HashMap) JSON(owner string) (string, error) {
+// json returns the first found hstore value for the given key as a JSON string
+func (h *HashMap) json(owner string) (string, error) {
 	query := fmt.Sprintf("SELECT hstore_to_json(hstore(array_agg(altering_pairs))) FROM %s, LATERAL unnest(hstore_to_array(attr)) altering_pairs WHERE %s = '%s'", h.table, ownerCol, escapeSingleQuotes(owner))
 	if Verbose {
 		fmt.Println(query)
@@ -296,16 +302,17 @@ func (h *HashMap) JSON(owner string) (string, error) {
 		return "", ErrNoAvailableValues
 	}
 	defer rows.Close()
-	var value string
+	var value sql.NullString
 	if rows.Next() {
 		if err = rows.Scan(&value); err != nil {
 			return "", err
 		}
+		s := value.String
 		if !h.host.rawUTF8 {
-			Decode(&value)
+			Decode(&s)
 		}
 		// Got a value, return it
-		return value, nil
+		return s, nil
 	}
 	return "", rows.Err()
 }
