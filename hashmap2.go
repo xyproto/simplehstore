@@ -66,6 +66,7 @@ func (hm2 *HashMap2) Set(owner, key, value string) error {
 	if err != nil {
 		return err
 	}
+
 	// Add the owner to the set
 	if err := hm2.OwnerSet().addWithTransaction(ctx, transaction, owner); err != nil {
 		transaction.Rollback()
@@ -117,7 +118,6 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 			return err
 		}
 	}
-	// Commit the transaction
 	return transaction.Commit()
 }
 
