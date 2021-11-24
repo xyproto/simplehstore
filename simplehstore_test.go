@@ -15,13 +15,10 @@ import (
 )
 
 const (
-	listname     = "testlist"
-	setname      = "testset"
-	hashmapname  = "testhashmap"
-	keyvaluename = "testkeyvalue"
-	testdata1    = "abc123"
-	testdata2    = "def456"
-	testdata3    = "ghi789"
+	hashmapname = "testhashmap"
+	testdata1   = "abc123"
+	testdata2   = "def456"
+	testdata3   = "ghi789"
 )
 
 func TestLocalConnection(t *testing.T) {
@@ -32,193 +29,6 @@ func TestLocalConnection(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-}
-
-func TestList1(t *testing.T) {
-	//host := New() // locally
-	host := NewHost(defaultConnectionString)
-	defer host.Close()
-
-	list, err := NewList(host, listname)
-	if err != nil {
-		t.Error(err)
-	}
-	list.Clear()
-	if err := list.Add(testdata1); err != nil {
-		t.Errorf("Error, could not add item to list! %s", err.Error())
-	}
-	items, err := list.All()
-	if err != nil {
-		t.Errorf("Error when retrieving list! %s", err.Error())
-	}
-	if len(items) != 1 {
-		t.Errorf("Error, wrong list length! %v", len(items))
-	}
-	if (len(items) > 0) && (items[0] != testdata1) {
-		t.Errorf("Error, wrong list contents! %v", items)
-	}
-	if err := list.Add(testdata2); err != nil {
-		t.Errorf("Error, could not add item to list! %s", err.Error())
-	}
-	if err := list.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to list! %s", err.Error())
-	}
-	items, err = list.All()
-	if err != nil {
-		t.Errorf("Error when retrieving list! %s", err.Error())
-	}
-	if len(items) != 3 {
-		t.Errorf("Error, wrong list length! %v", len(items))
-	}
-	err = list.Remove()
-	if err != nil {
-		t.Errorf("Error, could not remove list! %s", err.Error())
-	}
-}
-
-func TestList2(t *testing.T) {
-	host := NewHost(defaultConnectionString)
-	defer host.Close()
-
-	list, err := NewList(host, listname)
-	if err != nil {
-		t.Error(err)
-	}
-	list.Clear()
-	if err := list.Add(testdata1); err != nil {
-		t.Errorf("Error, could not add item to list! %s", err.Error())
-	}
-	if err := list.Add(testdata2); err != nil {
-		t.Errorf("Error, could not add item to list! %s", err.Error())
-	}
-
-	item, err := list.GetLast()
-	if err != nil {
-		t.Errorf("Error, could not get last item from list! %s", err.Error())
-	}
-	if item != testdata2 {
-		t.Errorf("Error, expected %s, got %s with GetLast()!", testdata2, item)
-	}
-
-	items, err := list.GetLastN(2)
-	if err != nil {
-		t.Errorf("Error, could not get last N items from list! %s", err.Error())
-	}
-	if len(items) != 2 {
-		t.Errorf("Error, wrong list length! %v", len(items))
-	}
-	if items[0] != testdata1 {
-		t.Errorf("Error, expected %s, got %s with GetLastN(2)[0]!", testdata1, items[0])
-	}
-	err = list.Remove()
-	if err != nil {
-		t.Errorf("Error, could not remove list! %s", err.Error())
-	}
-
-	// Check that list qualifies for the IList interface
-	var _ pinterface.IList = list
-}
-
-func TestSet(t *testing.T) {
-	Verbose = true
-
-	//host := New() // locally
-	host := NewHost(defaultConnectionString)
-
-	defer host.Close()
-	set, err := NewSet(host, setname)
-	if err != nil {
-		t.Error(err)
-	}
-	set.Clear()
-	if err := set.Add(testdata1); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
-	}
-	items, err := set.All()
-	if err != nil {
-		t.Errorf("Error when retrieving set! %s", err.Error())
-	}
-	if len(items) != 1 {
-		t.Errorf("Error, wrong set length! %v", len(items))
-	}
-	if (len(items) > 0) && (items[0] != testdata1) {
-		t.Errorf("Error, wrong set contents! %v", items)
-	}
-	if err := set.Add(testdata2); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
-	}
-	if err := set.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
-	}
-	// Add an element twice. This is a set, so the element should only appear once.
-	if err := set.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
-	}
-	items, err = set.All()
-	if err != nil {
-		t.Errorf("Error when retrieving set! %s", err.Error())
-	}
-	if len(items) != 3 {
-		t.Errorf("Error, wrong set length! %v\n%v\n", len(items), items)
-	}
-	err = set.Remove()
-	if err != nil {
-		t.Errorf("Error, could not remove set! %s", err.Error())
-	}
-
-	// Check that set qualifies for the ISet interface
-	var _ pinterface.ISet = set
-}
-
-func TestRawSet(t *testing.T) {
-	Verbose = true
-
-	//host := New() // locally
-	host := NewHost(defaultConnectionString)
-
-	defer host.Close()
-	set, err := NewSet(host, setname)
-	if err != nil {
-		t.Error(err)
-	}
-	set.Clear()
-	if err := set.Add(testdata1); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
-	}
-	items, err := set.All()
-	if err != nil {
-		t.Errorf("Error when retrieving set! %s", err.Error())
-	}
-	if len(items) != 1 {
-		t.Errorf("Error, wrong set length! %v", len(items))
-	}
-	if (len(items) > 0) && (items[0] != testdata1) {
-		t.Errorf("Error, wrong set contents! %v", items)
-	}
-	if err := set.Add(testdata2); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
-	}
-	if err := set.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
-	}
-	// Add an element twice. This is a set, so the element should only appear once.
-	if err := set.Add(testdata3); err != nil {
-		t.Errorf("Error, could not add item to set! %s", err.Error())
-	}
-	items, err = set.All()
-	if err != nil {
-		t.Errorf("Error when retrieving set! %s", err.Error())
-	}
-	if len(items) != 3 {
-		t.Errorf("Error, wrong set length! %v\n%v\n", len(items), items)
-	}
-	err = set.Remove()
-	if err != nil {
-		t.Errorf("Error, could not remove set! %s", err.Error())
-	}
-
-	// Check that set qualifies for the ISet interface
-	var _ pinterface.ISet = set
 }
 
 func TestHashMapUserStateShort(t *testing.T) {
@@ -269,7 +79,7 @@ func TestHashMapUserStateShort(t *testing.T) {
 		t.Error("aa should be false, but it is: " + aval)
 	}
 
-	json, err := hashmap.JSON(username)
+	json, err := hashmap.json(username)
 	if err != nil {
 		t.Error(err)
 	}
@@ -301,7 +111,7 @@ func TestHashMapUserStateShort(t *testing.T) {
 		t.Errorf("expected 64, got %s", aval)
 	}
 
-	json, err = hashmap.JSON(username)
+	json, err = hashmap.json(username)
 	if err != nil {
 		t.Error(err)
 	}
@@ -383,44 +193,6 @@ func TestHashMapUserState(t *testing.T) {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
 	}
 
-}
-
-func TestKeyValue(t *testing.T) {
-	Verbose = true
-
-	//host := New() // locally
-	host := NewHost(defaultConnectionString)
-
-	defer host.Close()
-	keyvalue, err := NewKeyValue(host, keyvaluename)
-	if err != nil {
-		t.Error(err)
-	}
-	keyvalue.Clear()
-
-	key := "password"
-	value := "hunter1"
-
-	if err := keyvalue.Set(key, value); err != nil {
-		t.Errorf("Error, could not set value in keyvalue! %s", err.Error())
-	}
-	// Twice
-	if err := keyvalue.Set(key, value); err != nil {
-		t.Errorf("Error, could not set value in keyvalue! %s", err.Error())
-	}
-	item, err := keyvalue.Get(key)
-	if err != nil {
-		t.Errorf("Error, could not fetch value from keyvalue! %s", err.Error())
-	}
-	if item != value {
-		t.Errorf("Error, expected %s, got %s!", value, item)
-	}
-	err = keyvalue.Remove()
-	if err != nil {
-		t.Errorf("Error, could not remove keyvalue! %s", err.Error())
-	}
-	// Check that keyvalue qualifies for the IKeyValue interface
-	var _ pinterface.IKeyValue = keyvalue
 }
 
 func TestHashKvMix(t *testing.T) {
@@ -555,117 +327,6 @@ func TestConfirmed(t *testing.T) {
 	if ok {
 		t.Error("The confirmed key should be gone")
 	}
-}
-
-func TestDupliSet(t *testing.T) {
-	host := NewHost(defaultConnectionString)
-	defer host.Close()
-	letters, err := NewSet(host, "letters")
-	if err != nil {
-		t.Error(err)
-	}
-	defer letters.Remove()
-
-	if err := letters.Add("a"); err != nil {
-		t.Error(err)
-	}
-	if err := letters.Add("a"); err != nil {
-		t.Error(err)
-	}
-	x, err := letters.All()
-	if err != nil {
-		t.Error(err)
-	}
-	if len(x) != 1 {
-		t.Error("The set should have length 1 after adding two identical items")
-	}
-	if err := letters.Add("b"); err != nil {
-		t.Error(err)
-	}
-	y, err := letters.All()
-	if err != nil {
-		t.Error(err)
-	}
-	if len(y) != 2 {
-		t.Error("The set should have length 2 after adding two identical items")
-	}
-}
-
-func TestInc(t *testing.T) {
-	Verbose = true
-	const (
-		kvname     = "kv_234_test_test_test"
-		testkey    = "key_234_test_test_test"
-		testvalue0 = "9"
-		testvalue1 = "10"
-		testvalue2 = "1"
-	)
-	host := NewHost(defaultConnectionString)
-	defer host.Close()
-	kv, err := NewKeyValue(host, kvname)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if err := kv.Set(testkey, testvalue0); err != nil {
-		t.Errorf("Error, could not set key and value! %s", err.Error())
-	}
-	if val, err := kv.Get(testkey); err != nil {
-		t.Errorf("Error, could not get key! %s", err.Error())
-	} else if val != testvalue0 {
-		t.Errorf("Error, wrong value! %s != %s", val, testvalue0)
-	}
-	incval, err := kv.Inc(testkey)
-	if err != nil {
-		t.Errorf("Error, could not INCR key! %s", err.Error())
-	}
-	if val, err := kv.Get(testkey); err != nil {
-		t.Errorf("Error, could not get key! %s", err.Error())
-	} else if val != testvalue1 {
-		t.Errorf("Error, wrong value! %s != %s", val, testvalue1)
-	} else if incval != testvalue1 {
-		t.Errorf("Error, wrong inc value! %s != %s", incval, testvalue1)
-	}
-	kv.Remove()
-	if _, err := kv.Get(testkey); err == nil {
-		t.Errorf("Error, could get key! %s", err.Error())
-	}
-	// Creates "0" and increases the value with 1
-	kv.Inc(testkey)
-	if val, err := kv.Get(testkey); err != nil {
-		t.Errorf("Error, could not get key! %s", err.Error())
-	} else if val != testvalue2 {
-		t.Errorf("Error, wrong value! %s != %s", val, testvalue2)
-	}
-	kv.Remove()
-	if _, err := kv.Get(testkey); err == nil {
-		t.Errorf("Error, could get key! %s", err.Error())
-	}
-}
-
-func TestInc2(t *testing.T) {
-	Verbose = true
-	const (
-		kvname     = "kv_237_test_test_test_inc"
-		testkey    = "key_237_test_test_test_inc"
-		emptyvalue = "1"
-	)
-	host := NewHost(defaultConnectionString)
-	defer host.Close()
-	kv, err := NewKeyValue(host, kvname)
-	if err != nil {
-		t.Error(err)
-	}
-
-	kv.Del(testkey)
-
-	if val, err := kv.Inc(testkey); err != nil {
-		t.Errorf("Error, could not get key! %s", err.Error())
-	} else if val != emptyvalue {
-		t.Errorf("Error, wrong value! %s != %s", val, emptyvalue)
-	}
-
-	kv.Remove()
 }
 
 func TestHashMapUserState2(t *testing.T) {
@@ -866,73 +527,5 @@ func TestDashesAndQuotes(t *testing.T) {
 	err = hashmap.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err.Error())
-	}
-}
-
-func TestInc3(t *testing.T) {
-	Verbose = true
-	const (
-		kvname     = "kv_237_test_test_test_inc's-x"
-		testkey    = "key_237_test_test_test_inc's-x"
-		emptyvalue = "1"
-	)
-	host := NewHost(defaultConnectionString)
-	defer host.Close()
-	kv, err := NewKeyValue(host, kvname)
-	if err != nil {
-		t.Error(err)
-	}
-
-	kv.Del(testkey)
-
-	if val, err := kv.Inc(testkey); err != nil {
-		t.Errorf("Error, could not get key! %s", err.Error())
-	} else if val != emptyvalue {
-		t.Errorf("Error, wrong value! %s != %s", val, emptyvalue)
-	}
-
-	kv.Remove()
-}
-
-func TestRemoveItem(t *testing.T) {
-
-	host := NewHost(defaultConnectionString)
-	defer host.Close()
-
-	list, err := NewList(host, listname)
-	if err != nil {
-		t.Error(err)
-	}
-	list.Clear()
-
-	if err := list.Add(testdata1); err != nil {
-		t.Errorf("Error, could not add item to list! %s", err.Error())
-	}
-
-	if err := list.Add(testdata2); err != nil {
-		t.Errorf("Error, could not add item to list! %s", err.Error())
-	}
-
-	err = list.RemoveByIndex(0)
-	if err != nil {
-		t.Errorf("Error, could not remove item #0! %s", err.Error())
-	}
-
-	items, err := list.All()
-	if err != nil {
-		t.Errorf("Error, could not get items from list! %s", err.Error())
-	}
-
-	if len(items) != 1 {
-		t.Error("Error, expected there to only be one item in the list!")
-	}
-
-	if items[0] != testdata2 {
-		t.Errorf("Error, expected %s, got %s with All()!", testdata2, items[0])
-	}
-
-	err = list.Remove()
-	if err != nil {
-		t.Errorf("Error, could not remove list! %s", err.Error())
 	}
 }
