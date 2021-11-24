@@ -67,7 +67,7 @@ func (kv *KeyValue) insert(key, encodedValue string) (int64, error) {
 	}
 	result, err := kv.host.db.Exec(query)
 	if Verbose {
-		log.Println("Inserted row into: "+kv.table+" err? ", err)
+		log.Println("keyValue insert: inserted row into: "+kv.table+" err? ", err)
 	}
 	n, _ := result.RowsAffected()
 	return n, err
@@ -82,7 +82,7 @@ func (kv *KeyValue) insertWithTransaction(ctx context.Context, transaction *sql.
 	}
 	result, err := transaction.ExecContext(ctx, query)
 	if Verbose {
-		log.Println("Inserted row into: "+kv.table+" err? ", err)
+		log.Println("keyValue insertWithTransaction: inserted row into: "+kv.table+" err? ", err)
 	}
 	n, _ := result.RowsAffected()
 	return n, err
@@ -100,7 +100,7 @@ func (kv *KeyValue) update(key, encodedValue string) (int64, error) {
 		log.Println("Updated row in: "+kv.table+" err? ", err)
 	}
 	if result == nil {
-		return 0, fmt.Errorf("no result when trying to update %s with a value", key)
+		return 0, fmt.Errorf("keyValue update: no result when trying to update %s with a value", key)
 	}
 	n, _ := result.RowsAffected()
 	return n, err
@@ -118,7 +118,7 @@ func (kv *KeyValue) updateWithTransaction(ctx context.Context, transaction *sql.
 		log.Println("Updated row in: "+kv.table+" err? ", err)
 	}
 	if result == nil {
-		return 0, fmt.Errorf("no result when trying to update %s with a value", key)
+		return 0, fmt.Errorf("keyValue updateWithTransaction: no result when trying to update %s with a value", key)
 	}
 	n, _ := result.RowsAffected()
 	return n, err
@@ -142,7 +142,7 @@ func (kv *KeyValue) Set(key, value string) error {
 			return err
 		}
 		if n == 0 {
-			return errors.New("could not update or insert any rows")
+			return errors.New("keyValue Set: could not update or insert any rows")
 		}
 	}
 	// success
@@ -208,7 +208,7 @@ func (kv *KeyValue) Get(key string) (string, error) {
 		return "", fmt.Errorf("KeyValue.Get: query error: %s", err)
 	}
 	if rows == nil {
-		return "", errors.New("KeyValue.Get: no rows for key " + key)
+		return "", fmt.Errorf("KeyValue.Get: no rows for key %s", key)
 	}
 	defer rows.Close()
 	var value sql.NullString
@@ -222,13 +222,13 @@ func (kv *KeyValue) Get(key string) (string, error) {
 		counter++
 	}
 	if err := rows.Err(); err != nil {
-		return "", fmt.Errorf("KeyValue.Get: rows.Err(): %s", err)
+		return "", fmt.Errorf("keyValue Get: rows.Err(): %s", err)
 	}
 	if counter != 1 {
-		return "", fmt.Errorf("Wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
+		return "", fmt.Errorf("keyValue Get: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
 	}
 	if counter == 0 {
-		return "", fmt.Errorf("No rows")
+		return "", errors.New("keyValue Get: no rows")
 	}
 	s := value.String
 	if !kv.host.rawUTF8 {

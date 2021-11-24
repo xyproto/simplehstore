@@ -73,16 +73,16 @@ func (h *HashMap) Set(owner, key, value string) error {
 	// First try updating the key/values
 	n, err := h.update(owner, key, encodedValue)
 	if err != nil {
-		return err
+		return fmt.Errorf("hashMap Set, update: %s", err)
 	}
 	// If no rows are affected (SELECTED) by the update, try inserting a row instead
 	if n == 0 {
 		n, err = h.insert(owner, key, encodedValue)
 		if err != nil {
-			return err
+			return fmt.Errorf("hashMap Set, insert: %s", err)
 		}
 		if n == 0 {
-			return errors.New("could not update or insert any rows")
+			return errors.New("hashMap Set: could not update or insert any rows")
 		}
 	}
 	// success
