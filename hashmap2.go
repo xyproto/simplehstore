@@ -134,7 +134,11 @@ func (hm2 *HashMap2) Has(owner, key string) (bool, error) {
 
 // Exists checks if a given owner exists as a hash map at all
 func (hm2 *HashMap2) Exists(owner string) (bool, error) {
-	return hm2.OwnerSet().Has(owner)
+	found, err := hm2.OwnerSet().Has(owner)
+	if err != nil && strings.HasSuffix(err.Error(), "does not exist") {
+		return false, nil
+	}
+	return found, err
 }
 
 // AllWhere returns all owner ID's that has a property where key == value
