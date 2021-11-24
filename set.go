@@ -84,10 +84,9 @@ func (s *Set) Has(value string) (bool, error) {
 	if err := rows.Err(); err != nil {
 		return false, err
 	}
-	if counter > 1 {
-		// Should never happen
-		return false, errors.New("Duplicate keys in set for value " + value + "!")
-	}
+	//if counter > 1 {
+	// more than one element that has the same *value* is fine!
+	//}
 	return counter > 0, nil
 }
 
