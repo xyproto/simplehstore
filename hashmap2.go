@@ -132,15 +132,24 @@ func (hm2 *HashMap2) Get(owner, key string) (string, error) {
 // Has checks if a given owner + key exists in the hash map
 func (hm2 *HashMap2) Has(owner, key string) (bool, error) {
 	s, err := hm2.KeyValue().Get(owner + fieldSep + key)
+	if err != nil && strings.HasSuffix(err.Error(), "does not exist") {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
 	return s != "", err
 }
 
 // Exists checks if a given owner exists as a hash map at all
 func (hm2 *HashMap2) Exists(owner string) (bool, error) {
 	found, err := hm2.OwnerSet().Has(owner)
+
 	if err != nil && strings.HasSuffix(err.Error(), "does not exist") {
 		return false, nil
+	} else if err != nil {
+		return false, err
 	}
+
 	return found, err
 }
 
