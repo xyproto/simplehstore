@@ -21,15 +21,18 @@ const fieldSep = "¤"
 // NewHashMap2 creates a new HashMap2 struct
 func NewHashMap2(host *Host, name string) (*HashMap2, error) {
 	var hm2 HashMap2
-	kv, err := NewKeyValue(host, name+"_hm2_kv")
+	// kv is a KeyValue (HSTORE) table of all properties (key = owner_ID + "¤" + property_key)
+	kv, err := NewKeyValue(host, name+"_properties_HSTORE_map")
 	if err != nil {
 		return nil, err
 	}
-	ownerSet, err := NewSet(host, name+"_hm2_owners")
+	// ownerSet is a set of all stored owners/IDs
+	ownerSet, err := NewSet(host, name+"_set_of_all_IDs")
 	if err != nil {
 		return nil, err
 	}
-	propSet, err := NewSet(host, name+"_hm2_seen_keys")
+	// propSet is a set of all encountered property keys
+	propSet, err := NewSet(host, name+"_encountered_property_keys")
 	if err != nil {
 		return nil, err
 	}
@@ -191,6 +194,8 @@ func (hm2 *HashMap2) CountInt64() (int64, error) {
 
 // DelKey removes a key of an owner in a hashmap (for instance the email field for a user)
 func (hm2 *HashMap2) DelKey(owner, key string) error {
+	// The key is not removed from the set of all encountered properties
+	// even if it's the last key with that name, for a performance vs storage tradeoff.
 	return hm2.KeyValue().Del(owner + fieldSep + key)
 }
 
