@@ -81,6 +81,14 @@ func TestHashMapUserStateShort(t *testing.T) {
 	}
 	fmt.Println(json)
 
+	keys, err := hashmap.All()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(keys) != 1 {
+		t.Errorf("expected 1 username, got: %v", keys)
+	}
+
 	err = hashmap.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err)

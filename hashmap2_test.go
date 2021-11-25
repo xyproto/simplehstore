@@ -84,6 +84,15 @@ func TestHashMap2UserStateShort(t *testing.T) {
 		t.Errorf("expected 64, got %s", aval)
 	}
 
+	keys, err := hashmap.All()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(keys) != 1 {
+		t.Errorf("expected 1 username, got: %v", keys)
+	}
+
 	err = hashmap.Remove()
 	if err != nil {
 		t.Errorf("Error, could not remove hashmap! %s", err)
