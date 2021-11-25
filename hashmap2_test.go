@@ -375,8 +375,11 @@ func TestHashMap2(t *testing.T) {
 		t.Errorf("Error, wrong element length! %d", len(items))
 	}
 
-	// Add one more item, so that there are 2 entries in the database
-	if err := hashmap.Set("bob", "number", "42"); err != nil {
+	if err := hashmap.Set("bob", "number", "64"); err != nil {
+		t.Errorf("Error, could not set value in hashmap! %s", err)
+	}
+
+	if err := hashmap.Set("alice", "number", "128"); err != nil {
 		t.Errorf("Error, could not set value in hashmap! %s", err)
 	}
 
@@ -414,14 +417,14 @@ func TestHashMap2(t *testing.T) {
 		t.Errorf("Error, expected the count of bob and alice to be 2, got %d!", count)
 	}
 
-	items, err = hashmap.AllWhere("number", "42")
+	items, err = hashmap.AllWhere("number", "64")
 	if err != nil {
 		t.Error("Error, could not get value for property number")
 	}
-	if len(items) == 0 {
-		t.Error("Error, there should be more than 0 entries for the number property")
+	if len(items) != 1 {
+		t.Errorf("Error, there should be only one entry where the number is 64, but we got: %v", items)
 	}
-	fmt.Println("Items where number is 42:", items)
+	fmt.Println("Items where number is 64:", items)
 
 	// Delete the "number" property/key from owner "bob"
 	err = hashmap.DelKey("bob", "number")
