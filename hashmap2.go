@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -63,37 +62,6 @@ func (hm2 *HashMap2) PropSet() *Set {
 // Set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
 func (hm2 *HashMap2) Set(owner, key, value string) error {
 	return hm2.SetMap(owner, map[string]string{key: value})
-
-	// 	log.Printf("START: HM2 SET %s %s %s\n", owner, key, value)
-	// 	if strings.Contains(owner, fieldSep) || strings.Contains(key, fieldSep) {
-	// 		return fmt.Errorf("owner or key can not contain %s", fieldSep)
-	// 	}
-	// 	// Use a context and a transaction to bundle queries
-	// 	ctx := context.Background()
-	// 	transaction, err := hm2.host.db.BeginTx(ctx, nil)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	// Add the owner to the set
-	// 	if err := hm2.OwnerSet().addWithTransaction(ctx, transaction, owner); err != nil {
-	// 		transaction.Rollback()
-	// 		return err
-	// 	}
-	// 	// Add the key to the property set
-	// 	if err := hm2.PropSet().addWithTransaction(ctx, transaction, key); err != nil {
-	// 		transaction.Rollback()
-	// 		return err
-	// 	}
-	// 	// Set a key + value for this "owner¤key"
-	// 	if err := hm2.KeyValue().setWithTransaction(ctx, transaction, owner, value); err != nil {
-	// 		transaction.Rollback()
-	// 		return err
-	// 	}
-	// 	// Commit the transaction
-	// 	err = transaction.Commit()
-	// 	log.Printf("DONE: HM2 SET %s %s %s: %v\n", owner, key, value, err)
-	// 	return err
-
 }
 
 // setPropWithTransaction will set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
@@ -147,7 +115,6 @@ func nonexisting(err error) bool {
 
 // Get a value
 func (hm2 *HashMap2) Get(owner, key string) (string, error) {
-	log.Printf("START: HM2 GET %s %s\n", owner, key)
 	s, err := hm2.KeyValue().Get(owner + fieldSep + key)
 	if err != nil && nonexisting(err) {
 		return s, err
@@ -161,16 +128,6 @@ func (hm2 *HashMap2) Get(owner, key string) (string, error) {
 
 // Has checks if a given owner + key exists in the hash map
 func (hm2 *HashMap2) Has(owner, key string) (bool, error) {
-	// 	hasOwner, err := hm2.OwnerSet().Has(owner)
-	// 	if nonexisting(err) {
-	// 		return false, nil
-	// 	}
-	// 	if err != nil {
-	// 		return false, err
-	// 	}
-	// 	if !hasOwner {
-	// 		return false, nil
-	// 	}
 	s, err := hm2.KeyValue().Get(owner + fieldSep + key) // interpret every error as "row not found", for now
 	if nonexisting(err) {
 		return false, nil
