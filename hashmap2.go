@@ -89,10 +89,12 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 
 	// Check the owner string
 	if strings.Contains(owner, fieldSep) {
+		transaction.Rollback()
 		return fmt.Errorf("owner can not contain %s", fieldSep)
 	}
 	// Add the owner to the set
 	if err := hm2.OwnerSet().addWithTransaction(ctx, transaction, owner); err != nil {
+		transaction.Rollback()
 		return err
 	}
 
