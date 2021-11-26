@@ -237,6 +237,42 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	return s, nil
 }
 
+// Get a value given a key
+func (kv *KeyValue) getWithTransaction(ctx context.Context, transaction *sql.Tx, key string) (string, error) {
+	rows, err := transaction.QueryContext(ctx, fmt.Sprintf("SELECT attr -> '%s' FROM %s", escapeSingleQuotes(key), pq.QuoteIdentifier(kvPrefix+kv.table)))
+	if err != nil {
+		return "", fmt.Errorf("KeyValue.Get: query error: %s", err)
+	}
+	if rows == nil {
+		return "", fmt.Errorf("KeyValue.Get: no rows for key %s", key)
+	}
+	defer rows.Close()
+	var value sql.NullString
+	// Get the value. Should only loop once.
+	counter := 0
+	for rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			return "", err
+		}
+		counter++
+	}
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("keyValue Get: rows.Err(): %s", err)
+	}
+	if counter != 1 {
+		return "", fmt.Errorf("keyValue Get: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
+	}
+	if counter == 0 {
+		return "", errors.New("keyValue Get: no rows")
+	}
+	s := value.String
+	if !kv.host.rawUTF8 {
+		Decode(&s)
+	}
+	return s, nil
+}
+
 // Inc increases the value of a key and returns the new value.
 // Returns "1" if no previous value is found.
 func (kv *KeyValue) Inc(key string) (string, error) {

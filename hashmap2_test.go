@@ -426,6 +426,18 @@ func TestHashMap2(t *testing.T) {
 	}
 	fmt.Println("Items where number is 64:", items)
 
+	result, err := hashmap.GetMap("bob", []string{"password", "number"})
+	if err != nil {
+		t.Error(err)
+	}
+	correctResult := map[string]string{
+		"password": "hunter1",
+		"number":   "64",
+	}
+	if result["password"] != correctResult["password"] || result["number"] != correctResult["number"] {
+		t.Errorf("expected %v but got %v\n", correctResult, result)
+	}
+
 	// Delete the "number" property/key from owner "bob"
 	err = hashmap.DelKey("bob", "number")
 	if err != nil {

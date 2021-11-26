@@ -128,6 +128,30 @@ func (hm2 *HashMap2) Get(owner, key string) (string, error) {
 	return s, nil
 }
 
+// Get multiple values
+func (hm2 *HashMap2) GetMap(owner string, keys []string) (map[string]string, error) {
+	results := make(map[string]string)
+
+	// Use a context and a transaction to bundle queries
+	ctx := context.Background()
+	transaction, err := hm2.host.db.BeginTx(ctx, nil)
+	if err != nil {
+		return results, err
+	}
+
+	for _, key := range keys {
+		s, err := hm2.KeyValue().getWithTransaction(ctx, transaction, owner+fieldSep+key)
+		if err != nil {
+			transaction.Rollback()
+			return results, err
+		}
+		results[key] = s
+	}
+
+	transaction.Commit()
+	return results, nil
+}
+
 // Has checks if a given owner + key exists in the hash map
 func (hm2 *HashMap2) Has(owner, key string) (bool, error) {
 	s, err := hm2.KeyValue().Get(owner + fieldSep + key) // interpret every error as "row not found", for now
