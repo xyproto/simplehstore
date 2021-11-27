@@ -487,6 +487,52 @@ func TestHashMap2(t *testing.T) {
 		t.Error(err)
 	}
 
+	all := map[string]map[string]string{
+		"john": map[string]string{
+			"number":   "999",
+			"password": "aaa",
+		},
+		"beatrice": map[string]string{
+			"number":   "000",
+			"password": "zzz",
+		},
+	}
+	if err := hashmap.SetLargeMap(all); err != nil {
+		t.Error(err)
+	}
+
+	usernames, err = hashmap.All()
+	if err != nil {
+		t.Error(err)
+	}
+	for _, username := range usernames {
+		fmt.Println("USERNAME " + username)
+		keys, err := hashmap.Keys(username)
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Println("KEYS FOR "+username+":", keys)
+		m, err := hashmap.GetMap(username, keys)
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Println(m)
+	}
+
+	// Check if john.number and beatrice.password are as expected
+
+	if v, err := hashmap.Get("john", "number"); err != nil {
+		t.Error(err)
+	} else if v != "999" {
+		t.Errorf("john.number should be 999 but is %s", v)
+	}
+
+	if v, err := hashmap.Get("beatrice", "password"); err != nil {
+		t.Error(err)
+	} else if v != "zzz" {
+		t.Errorf("john.number should be zzz but is %s", v)
+	}
+
 	keys, err := hashmap.Keys(username)
 	if err != nil {
 		t.Error(err)
