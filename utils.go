@@ -156,3 +156,19 @@ func rebuildConnectionString(connectionString string, withDB bool) (string, stri
 func escapeSingleQuotes(s string) string {
 	return strings.Replace(s, "'", "''", -1)
 }
+
+func hasS(xs []string, x string) bool {
+	for _, e := range xs {
+		if e == x {
+			return true
+		}
+	}
+	return false
+}
+
+func nonexisting(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.HasSuffix(err.Error(), "does not exist")
+}
