@@ -65,42 +65,45 @@ func (hm2 *HashMap2) Set(owner, key, value string) error {
 }
 
 // setPropWithTransaction will set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
-func (hm2 *HashMap2) setPropWithTransaction(ctx context.Context, transaction *sql.Tx, owner, key, value string) error {
-	if strings.Contains(key, fieldSep) {
-		return fmt.Errorf("key can not contain %s", fieldSep)
+func (hm2 *HashMap2) setPropWithTransaction(ctx context.Context, transaction *sql.Tx, owner, key, value string, checkForFieldSep bool) error {
+	if checkForFieldSep {
+		if strings.Contains(owner, fieldSep) {
+			return fmt.Errorf("owner can not contain %s", fieldSep)
+		}
+		if strings.Contains(key, fieldSep) {
+			return fmt.Errorf("key can not contain %s", fieldSep)
+		}
 	}
 	// Add the key to the property set
 	if err := hm2.PropSet().addWithTransaction(ctx, transaction, key); err != nil {
 		return err
 	}
 	// Set a key + value for this "owner¤key"
-	return hm2.KeyValue().setWithTransaction(ctx, transaction, owner+fieldSep+key, value)
+	kv := hm2.KeyValue()
+	if !kv.host.rawUTF8 {
+		Encode(&value)
+	}
+	encodedValue := value
+	return kv.setWithTransaction(ctx, transaction, owner+fieldSep+key, encodedValue)
 }
 
 // SetMap will set many keys/values, in a single transaction
 func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
-
+	checkForFieldSep := true
 	// Use a context and a transaction to bundle queries
 	ctx := context.Background()
 	transaction, err := hm2.host.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-
-	// Check the owner string
-	if strings.Contains(owner, fieldSep) {
-		transaction.Rollback()
-		return fmt.Errorf("owner can not contain %s", fieldSep)
-	}
 	// Add the owner to the set
 	if err := hm2.OwnerSet().addWithTransaction(ctx, transaction, owner); err != nil {
 		transaction.Rollback()
 		return err
 	}
-
 	// Prepare the changes
 	for k, v := range m {
-		if err := hm2.setPropWithTransaction(ctx, transaction, owner, k, v); err != nil {
+		if err := hm2.setPropWithTransaction(ctx, transaction, owner, k, v, checkForFieldSep); err != nil {
 			transaction.Rollback()
 			return err
 		}
@@ -108,11 +111,39 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 	return transaction.Commit()
 }
 
-func nonexisting(err error) bool {
-	if err == nil {
-		return false
+// SetLargeMap will add many owners+keys/values, in a single transaction, without checking if they already exists.
+// It also does not check if the keys or property keys contains fieldSep (¤) or not, for performance.
+// These must all be brand new "usernames" (the first key), and not be in the existing hm2.OwnerSet().
+// This function has good performance, but must be used carefully.
+func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) error {
+	// Use a context and a transaction to bundle queries
+	ctx := context.Background()
+	transaction, err := hm2.host.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
 	}
-	return strings.HasSuffix(err.Error(), "does not exist")
+	ownerSet := hm2.OwnerSet()
+	kv := hm2.KeyValue()
+	for owner, props := range allProperties {
+		// Add the owner to the set
+		if err := ownerSet.addWithTransaction(ctx, transaction, owner); err != nil {
+			transaction.Rollback()
+			return err
+		}
+		// Prepare the changes
+		for k, value := range props {
+			// Set a key + value for this "owner¤key"
+			if !kv.host.rawUTF8 {
+				Encode(&value)
+			}
+			encodedValue := value
+			if _, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+k, encodedValue); err != nil {
+				transaction.Rollback()
+				return err
+			}
+		}
+	}
+	return transaction.Commit()
 }
 
 // Get a value
@@ -202,8 +233,12 @@ func (hm2 *HashMap2) Keys(owner string) ([]string, error) {
 	// TODO: Improve the performance of this by using SQL instead of looping
 	allKeys := []string{}
 	for _, key := range allProps {
+		fmt.Printf("HAS %s GOT %s? ", owner, key)
 		if found, err := hm2.Has(owner, key); err == nil && found {
+			fmt.Printf("YES\n")
 			allKeys = append(allKeys, key)
+		} else {
+			fmt.Printf("NO\n")
 		}
 	}
 	return allKeys, nil

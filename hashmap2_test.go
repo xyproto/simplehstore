@@ -438,6 +438,43 @@ func TestHashMap2(t *testing.T) {
 		t.Errorf("expected %v but got %v\n", correctResult, result)
 	}
 
+	usernames, err := hashmap.All()
+	if err != nil {
+		t.Error(err)
+	}
+	if !hasS(usernames, "john") && !hasS(usernames, "beatrice") {
+		all := map[string]map[string]string{
+			"john": map[string]string{
+				"number":   "256",
+				"password": "qwertyqwerty",
+			},
+			"beatrice": map[string]string{
+				"number":   "1024",
+				"password": "asdfasdf",
+			},
+		}
+		if err := hashmap.SetLargeMap(all); err != nil {
+			t.Error(err)
+		}
+	}
+	usernames, err = hashmap.All()
+	if err != nil {
+		t.Error(err)
+	}
+	for _, username := range usernames {
+		fmt.Println("USERNAME " + username)
+		keys, err := hashmap.Keys(username)
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Println("KEYS FOR "+username+":", keys)
+		m, err := hashmap.GetMap(username, keys)
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Println(m)
+	}
+
 	// Delete the "number" property/key from owner "bob"
 	err = hashmap.DelKey("bob", "number")
 	if err != nil {
@@ -454,17 +491,8 @@ func TestHashMap2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
 	if len(keys) == 0 {
 		t.Errorf("Error, keys for %s are empty but should contain %s\n", username, "password")
-	}
-
-	// only "password"
-	if len(keys) != 1 {
-		t.Errorf("Error, wrong keys: %v\n", keys)
-	}
-	if keys[0] != "password" {
-		t.Errorf("Error, wrong keys: %v\n", keys)
 	}
 
 	err = hashmap.Remove()

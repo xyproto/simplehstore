@@ -150,11 +150,7 @@ func (kv *KeyValue) Set(key, value string) error {
 }
 
 // set a key and value, as part of a transaction
-func (kv *KeyValue) setWithTransaction(ctx context.Context, transaction *sql.Tx, key, value string) error {
-	if !kv.host.rawUTF8 {
-		Encode(&value)
-	}
-	encodedValue := value
+func (kv *KeyValue) setWithTransaction(ctx context.Context, transaction *sql.Tx, key, encodedValue string) error {
 	// First try updating the key/values
 	n, err := kv.updateWithTransaction(ctx, transaction, key, encodedValue)
 	if err != nil {
