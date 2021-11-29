@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	VersionString     = "1.4.5"
+	VersionString     = "1.4.6"
 	defaultStringType = "TEXT"
 	defaultPort       = 5432
 	encoding          = "UTF8"
