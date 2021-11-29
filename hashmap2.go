@@ -101,9 +101,14 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 		transaction.Rollback()
 		return err
 	}
+	propset := hm2.PropSet()
 	// Prepare the changes
 	for k, v := range m {
 		if err := hm2.setPropWithTransaction(ctx, transaction, owner, k, v, checkForFieldSep); err != nil {
+			transaction.Rollback()
+			return err
+		}
+		if err := propset.addWithTransaction(ctx, transaction, k); err != nil {
 			transaction.Rollback()
 			return err
 		}
