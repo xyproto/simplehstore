@@ -91,27 +91,38 @@ func (hm2 *HashMap2) setPropWithTransaction(ctx context.Context, transaction *sq
 // SetMap will set many keys/values, in a single transaction
 func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 	checkForFieldSep := true
+
+	// Get all properties
+	propset := hm2.PropSet()
+	allProperties, err := propset.All()
+	if err != nil {
+		return err
+	}
+
 	// Use a context and a transaction to bundle queries
 	ctx := context.Background()
 	transaction, err := hm2.host.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
+
 	// Add the owner to the set
 	if err := hm2.OwnerSet().addWithTransaction(ctx, transaction, owner); err != nil {
 		transaction.Rollback()
 		return err
 	}
-	propset := hm2.PropSet()
+
 	// Prepare the changes
 	for k, v := range m {
 		if err := hm2.setPropWithTransaction(ctx, transaction, owner, k, v, checkForFieldSep); err != nil {
 			transaction.Rollback()
 			return err
 		}
-		if err := propset.addWithTransaction(ctx, transaction, k); err != nil {
-			transaction.Rollback()
-			return err
+		if !hasS(allProperties, k) {
+			if err := propset.addWithTransaction(ctx, transaction, k); err != nil {
+				transaction.Rollback()
+				return err
+			}
 		}
 	}
 	return transaction.Commit()
