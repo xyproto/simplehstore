@@ -220,12 +220,15 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	if err := rows.Err(); err != nil {
 		return "", fmt.Errorf("keyValue Get: rows.Err(): %s", err)
 	}
-	if counter != 1 {
-		return "", fmt.Errorf("keyValue Get: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
-	}
+
 	if counter == 0 {
 		return "", errors.New("keyValue Get: no rows")
 	}
+
+	if counter != 1 {
+		return "", fmt.Errorf("keyValue Get: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
+	}
+
 	s := value.String
 	if !kv.host.rawUTF8 {
 		Decode(&s)
@@ -256,12 +259,15 @@ func (kv *KeyValue) getWithTransaction(ctx context.Context, transaction *sql.Tx,
 	if err := rows.Err(); err != nil {
 		return "", fmt.Errorf("keyValue Get: rows.Err(): %s", err)
 	}
-	if counter != 1 {
-		return "", fmt.Errorf("keyValue Get: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
-	}
+
 	if counter == 0 {
 		return "", errors.New("keyValue Get: no rows")
 	}
+
+	if counter != 1 {
+		return "", fmt.Errorf("keyValue Get: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
+	}
+
 	s := value.String
 	if !kv.host.rawUTF8 {
 		Decode(&s)
