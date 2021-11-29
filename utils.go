@@ -166,9 +166,10 @@ func hasS(xs []string, x string) bool {
 	return false
 }
 
-func nonexisting(err error) bool {
+func noResult(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.HasSuffix(err.Error(), "does not exist")
+	msg := err.Error()
+	return strings.HasSuffix(msg, "does not exist") || strings.Contains(msg, "no rows")
 }

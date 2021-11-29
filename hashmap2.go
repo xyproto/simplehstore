@@ -3,7 +3,6 @@ package simplehstore
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -338,16 +337,23 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	return nil // success
 }
 
-// Get a value
+// Get a value.
+// Returns: value, error
+// If a value was not found, an empty string is returned.
 func (hm2 *HashMap2) Get(owner, key string) (string, error) {
 	s, err := hm2.KeyValue().Get(owner + fieldSep + key)
-	if err != nil && nonexisting(err) {
-		return s, err
+	if err != nil {
+		if noResult(err) {
+			return "", nil
+		} else {
+			return "", err
+		}
 	}
+	// No error and no value
 	if s == "" {
-		err = errors.New("returned value is blank")
-		return s, err
+		return s, nil
 	}
+	// No error and actually got a value
 	return s, nil
 }
 
@@ -377,13 +383,17 @@ func (hm2 *HashMap2) GetMap(owner string, keys []string) (map[string]string, err
 
 // Has checks if a given owner + key exists in the hash map
 func (hm2 *HashMap2) Has(owner, key string) (bool, error) {
-	s, err := hm2.KeyValue().Get(owner + fieldSep + key) // interpret every error as "row not found", for now
-	if nonexisting(err) {
-		return false, nil
-	}
+	s, err := hm2.KeyValue().Get(owner + fieldSep + key)
 	if err != nil {
-		return false, err
+		if noResult(err) {
+			// Not an actual error, just got no results
+			return false, nil
+		} else {
+			// An actual error
+			return false, err
+		}
 	}
+	// No error, got a result
 	if s == "" {
 		return false, nil
 	}
@@ -392,10 +402,18 @@ func (hm2 *HashMap2) Has(owner, key string) (bool, error) {
 
 // Exists checks if a given owner exists as a hash map at all
 func (hm2 *HashMap2) Exists(owner string) (bool, error) {
-	if hasOwner, err := hm2.OwnerSet().Has(owner); !nonexisting(err) {
-		return hasOwner, err
+	found, err := hm2.OwnerSet().Has(owner)
+	if err != nil {
+		// Either an actual error or no result
+		if noResult(err) {
+			return false, nil
+		} else {
+			// An actual error
+			return false, err
+		}
 	}
-	return false, nil
+	// Got a result, no error
+	return found, nil
 }
 
 // AllWhere returns all owner ID's that has a property where key == value
