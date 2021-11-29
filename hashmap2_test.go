@@ -323,8 +323,8 @@ func TestHashMap2UserState2(t *testing.T) {
 	value := "hunter1"
 
 	// Get key that doesn't exist yet
-	_, err = hashmap.Get("ownerblabla", "keyblabla")
-	if err == nil {
+	v, err := hashmap.Get("ownerblabla", "keyblabla")
+	if err == nil && v != "" {
 		t.Errorf("Key found, when it should be missing! %s", err)
 	}
 
@@ -353,8 +353,8 @@ func TestHashMap2(t *testing.T) {
 	value := "hunter1"
 
 	// Get key that doesn't exist yet
-	_, err = hashmap.Get("ownerblabla", "keyblabla")
-	if err == nil {
+	v, err := hashmap.Get("ownerblabla", "keyblabla")
+	if err == nil && v != "" {
 		t.Errorf("Key found, when it should be missing! %s", err)
 	}
 
@@ -583,8 +583,8 @@ func TestDashesAndQuotes2(t *testing.T) {
 	value := "hunter's table-cloth"
 
 	// Get key that doesn't exist yet
-	_, err = hashmap.Get("ownerblabla", "keyblabla")
-	if err == nil {
+	v, err := hashmap.Get("ownerblabla", "keyblabla")
+	if err == nil && v != "" {
 		t.Errorf("Key found, when it should be missing! %s", err)
 	}
 

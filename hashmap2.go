@@ -345,9 +345,8 @@ func (hm2 *HashMap2) Get(owner, key string) (string, error) {
 	if err != nil {
 		if noResult(err) {
 			return "", nil
-		} else {
-			return "", err
 		}
+		return "", err
 	}
 	// No error and no value
 	if s == "" {
@@ -388,10 +387,9 @@ func (hm2 *HashMap2) Has(owner, key string) (bool, error) {
 		if noResult(err) {
 			// Not an actual error, just got no results
 			return false, nil
-		} else {
-			// An actual error
-			return false, err
 		}
+		// An actual error
+		return false, err
 	}
 	// No error, got a result
 	if s == "" {
@@ -407,10 +405,9 @@ func (hm2 *HashMap2) Exists(owner string) (bool, error) {
 		// Either an actual error or no result
 		if noResult(err) {
 			return false, nil
-		} else {
-			// An actual error
-			return false, err
 		}
+		// An actual error
+		return false, err
 	}
 	// Got a result, no error
 	return found, nil
