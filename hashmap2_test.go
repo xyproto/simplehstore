@@ -452,6 +452,10 @@ func TestHashMap2(t *testing.T) {
 				"number":   "1024",
 				"password": "asdfasdf",
 			},
+			"jerry": map[string]string{
+				"beef":  "asdf",
+				"jerky": "asdf",
+			},
 		}
 		if err := hashmap.SetLargeMap(all); err != nil {
 			t.Error(err)
@@ -496,6 +500,11 @@ func TestHashMap2(t *testing.T) {
 			"number":   "000",
 			"password": "zzz",
 		},
+		"tim": map[string]string{
+			"look":   "1",
+			"around": "2",
+			"you":    "3",
+		},
 	}
 	if err := hashmap.SetLargeMap(all); err != nil {
 		t.Error(err)
@@ -539,6 +548,12 @@ func TestHashMap2(t *testing.T) {
 	}
 	if len(keys) == 0 {
 		t.Errorf("Error, keys for %s are empty but should contain %s\n", username, "password")
+	}
+
+	if v, err := hashmap.Get("tim", "look"); err != nil {
+		t.Error(err)
+	} else if v != "1" {
+		t.Errorf("Expected 1, got %s\n", v)
 	}
 
 	err = hashmap.Remove()

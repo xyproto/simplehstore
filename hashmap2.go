@@ -116,34 +116,113 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 // These must all be brand new "usernames" (the first key), and not be in the existing hm2.OwnerSet().
 // This function has good performance, but must be used carefully.
 func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) error {
-	// Use a context and a transaction to bundle queries
-	ctx := context.Background()
-	transaction, err := hm2.host.db.BeginTx(ctx, nil)
+	var insertErr, updateErr error
+
+	// First get the KeyValue and Set structures that will be used
+	ownerSet := hm2.OwnerSet()
+	kv := hm2.KeyValue()
+	propSet := hm2.PropSet()
+
+	// Get all existing owners
+	allOwners, err := ownerSet.All()
 	if err != nil {
 		return err
 	}
-	ownerSet := hm2.OwnerSet()
-	kv := hm2.KeyValue()
-	for owner, props := range allProperties {
-		// Add the owner to the set
-		if err := ownerSet.addWithTransaction(ctx, transaction, owner); err != nil {
-			transaction.Rollback()
-			return err
+
+	// Find all unique properties
+	props := []string{}
+
+	// Find all owners in allProperties that already exists, and those that doesn't.
+	recognizedOwners := []string{}
+	unrecognizedOwners := []string{}
+	for owner := range allProperties {
+		if hasS(allOwners, owner) {
+			recognizedOwners = append(recognizedOwners, owner)
+		} else {
+			unrecognizedOwners = append(unrecognizedOwners, owner)
 		}
-		// Prepare the changes
-		for k, value := range props {
-			// Set a key + value for this "owner¤key"
-			if !kv.host.rawUTF8 {
-				Encode(&value)
-			}
-			encodedValue := value
-			if _, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+k, encodedValue); err != nil {
-				transaction.Rollback()
-				return err
+		// Find all unique properties
+		for k := range allProperties[owner] {
+			if !hasS(props, k) {
+				props = append(props, k)
 			}
 		}
 	}
-	return transaction.Commit()
+
+	// Store all properties (should be a low number)
+	for _, prop := range props {
+		if err := propSet.Add(prop); err != nil {
+			return err
+		}
+	}
+
+	// Start one goroutine + transaction for the recognized owners
+	go func() {
+		ctx := context.Background()
+		// Create a new transaction
+		transaction, err := hm2.host.db.BeginTx(ctx, nil)
+		if err != nil {
+			updateErr = err
+			return
+		}
+		// Then update all recognized owners
+		for _, owner := range recognizedOwners {
+			// Prepare the changes
+			for k, value := range allProperties[owner] {
+				// Set a key + value for this "owner¤key"
+				if !kv.host.rawUTF8 {
+					Encode(&value)
+				}
+				encodedValue := value
+				if _, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+k, encodedValue); err != nil {
+					transaction.Rollback()
+					updateErr = err
+					return
+				}
+			}
+		}
+		// And send it
+		updateErr = transaction.Commit()
+	}()
+
+	// Start one goroutine + transaction for the unrecognized owners
+	go func() {
+		ctx := context.Background()
+		// Create a new transaction
+		transaction, err := hm2.host.db.BeginTx(ctx, nil)
+		if err != nil {
+			insertErr = err
+			return
+		}
+		for _, owner := range unrecognizedOwners {
+			// Add the owner to the set of owners in the database
+			if err := ownerSet.addWithTransaction(ctx, transaction, owner); err != nil {
+				transaction.Rollback()
+				insertErr = err
+				return
+			}
+			// Prepare the changes
+			for k, value := range allProperties[owner] {
+				// Set a key + value for this "owner¤key"
+				if !kv.host.rawUTF8 {
+					Encode(&value)
+				}
+				encodedValue := value
+				if _, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+k, encodedValue); err != nil {
+					transaction.Rollback()
+					insertErr = err
+					return
+				}
+			}
+		}
+		insertErr = transaction.Commit()
+	}()
+
+	// Check the error values
+	if updateErr != nil {
+		return updateErr
+	}
+	return insertErr
 }
 
 // Get a value
