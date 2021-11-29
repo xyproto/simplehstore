@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // HashMap2 contains a KeyValue struct and a dbDatastructure.
@@ -121,7 +122,14 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 // These must all be brand new "usernames" (the first key), and not be in the existing hm2.OwnerSet().
 // This function has good performance, but must be used carefully.
 func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) error {
-	var insertErr, updateErr error
+	var (
+		insertErr, propSetErr, updateErr error
+		wg                               sync.WaitGroup
+	)
+
+	if Verbose {
+		fmt.Println("SetLargeMap START")
+	}
 
 	// First get the KeyValue and Set structures that will be used
 	ownerSet := hm2.OwnerSet()
@@ -132,6 +140,10 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	allOwners, err := ownerSet.All()
 	if err != nil {
 		return err
+	}
+
+	if Verbose {
+		fmt.Printf("Got all %d owners\n", len(allOwners))
 	}
 
 	// Find all unique properties
@@ -154,26 +166,69 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		}
 	}
 
-	// Store all properties (should be a low number)
-	for _, prop := range props {
-		if err := propSet.Add(prop); err != nil {
-			return err
+	ctx := context.Background()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		if Verbose {
+			fmt.Println("prop set START")
 		}
-	}
+
+		// Create a new transaction
+		transaction, err := hm2.host.db.BeginTx(ctx, nil)
+		if err != nil {
+			propSetErr = err
+			return
+		}
+
+		// Store all properties (should be a low number)
+		for _, prop := range props {
+			if Verbose {
+				fmt.Printf("ADDING %s\n", prop)
+			}
+			if err := propSet.addWithTransaction(ctx, transaction, prop); err != nil {
+				propSetErr = err
+				return
+			}
+		}
+
+		if Verbose {
+			fmt.Println("prop set COMMIT")
+		}
+
+		// And send it
+		propSetErr = transaction.Commit()
+
+		if Verbose {
+			fmt.Println("prop set DONE")
+		}
+	}()
 
 	// Start one goroutine + transaction for the recognized owners
+	wg.Add(1)
 	go func() {
-		ctx := context.Background()
+		defer wg.Done()
+
+		if Verbose {
+			fmt.Println("recognized owners START")
+		}
+
 		// Create a new transaction
 		transaction, err := hm2.host.db.BeginTx(ctx, nil)
 		if err != nil {
 			updateErr = err
 			return
 		}
+
 		// Then update all recognized owners
 		for _, owner := range recognizedOwners {
 			// Prepare the changes
 			for k, value := range allProperties[owner] {
+				if Verbose {
+					fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
+				}
 				// Set a key + value for this "owner¤key"
 				if !kv.host.rawUTF8 {
 					Encode(&value)
@@ -186,19 +241,36 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 				}
 			}
 		}
+
+		if Verbose {
+			fmt.Println("recognized owners COMMIT")
+		}
+
 		// And send it
 		updateErr = transaction.Commit()
+
+		if Verbose {
+			fmt.Println("recognized owners DONE")
+		}
 	}()
 
 	// Start one goroutine + transaction for the unrecognized owners
+	wg.Add(1)
 	go func() {
-		ctx := context.Background()
+		defer wg.Done()
+
+		if Verbose {
+			fmt.Println("unrecognized owners START")
+		}
+
 		// Create a new transaction
 		transaction, err := hm2.host.db.BeginTx(ctx, nil)
 		if err != nil {
 			insertErr = err
 			return
 		}
+
+		// Then update all unrecognized owners
 		for _, owner := range unrecognizedOwners {
 			// Add the owner to the set of owners in the database
 			if err := ownerSet.addWithTransaction(ctx, transaction, owner); err != nil {
@@ -208,6 +280,9 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 			}
 			// Prepare the changes
 			for k, value := range allProperties[owner] {
+				if Verbose {
+					fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
+				}
 				// Set a key + value for this "owner¤key"
 				if !kv.host.rawUTF8 {
 					Encode(&value)
@@ -220,14 +295,36 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 				}
 			}
 		}
+
+		if Verbose {
+			fmt.Println("unrecognized owners COMMIT")
+		}
+
+		// And send it
 		insertErr = transaction.Commit()
+
+		if Verbose {
+			fmt.Println("unrecognized owners DONE")
+		}
 	}()
+
+	wg.Wait()
+
+	if Verbose {
+		fmt.Println("SetLargeMap DONE")
+	}
 
 	// Check the error values
 	if updateErr != nil {
 		return updateErr
 	}
-	return insertErr
+	if insertErr != nil {
+		return insertErr
+	}
+	if propSetErr != nil {
+		return propSetErr
+	}
+	return nil // success
 }
 
 // Get a value
