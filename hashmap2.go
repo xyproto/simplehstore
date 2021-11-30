@@ -170,16 +170,8 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		}
 	}
 
-	ctx := context.Background()
-
 	if Verbose {
 		fmt.Println("prop set START")
-	}
-
-	// Create a new transaction
-	transaction, err := hm2.host.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
 	}
 
 	// Store all properties (should be a low number)
@@ -187,23 +179,16 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		if Verbose {
 			fmt.Printf("ADDING %s\n", prop)
 		}
-		if err := propSet.addWithTransaction(ctx, transaction, prop); err != nil {
+		if err := propSet.Add(prop); err != nil {
 			return err
 		}
 	}
 
 	if Verbose {
-		fmt.Println("prop set COMMIT")
-	}
-
-	// And send it
-	if err := transaction.Commit(); err != nil {
-		return err
-	}
-
-	if Verbose {
 		fmt.Println("prop set DONE")
 	}
+
+	ctx := context.Background()
 
 	// Start one goroutine + transaction for the recognized owners
 
@@ -212,7 +197,7 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	}
 
 	// Create a new transaction
-	transaction, err = hm2.host.db.BeginTx(ctx, nil)
+	transaction, err := hm2.host.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -252,7 +237,6 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	if Verbose {
 		fmt.Println("unrecognized owners START")
 	}
-
 	// Then update/insert all unrecognized owners
 	for _, owner := range unrecognizedOwners {
 		// Add the owner to the set of owners in the database
@@ -270,7 +254,6 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 			}
 		}
 	}
-
 	if Verbose {
 		fmt.Println("unrecognized owners DONE")
 	}
