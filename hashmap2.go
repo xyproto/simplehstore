@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"sync"
 )
 
 // HashMap2 contains a KeyValue struct and a dbDatastructure.
@@ -132,11 +131,6 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 // These must all be brand new "usernames" (the first key), and not be in the existing hm2.OwnerSet().
 // This function has good performance, but must be used carefully.
 func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) error {
-	var (
-		insertErr, propSetErr, updateErr error
-		wg                               sync.WaitGroup
-	)
-
 	if Verbose {
 		fmt.Println("SetLargeMap START")
 	}
@@ -178,162 +172,113 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 
 	ctx := context.Background()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	if Verbose {
+		fmt.Println("prop set START")
+	}
 
+	// Create a new transaction
+	transaction, err := hm2.host.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	// Store all properties (should be a low number)
+	for _, prop := range props {
 		if Verbose {
-			fmt.Println("prop set START")
+			fmt.Printf("ADDING %s\n", prop)
 		}
-
-		// Create a new transaction
-		transaction, err := hm2.host.db.BeginTx(ctx, nil)
-		if err != nil {
-			propSetErr = err
-			return
+		if err := propSet.addWithTransaction(ctx, transaction, prop); err != nil {
+			return err
 		}
+	}
 
-		// Store all properties (should be a low number)
-		for _, prop := range props {
-			if Verbose {
-				fmt.Printf("ADDING %s\n", prop)
-			}
-			if err := propSet.addWithTransaction(ctx, transaction, prop); err != nil {
-				propSetErr = err
-				return
-			}
-		}
+	if Verbose {
+		fmt.Println("prop set COMMIT")
+	}
 
-		if Verbose {
-			fmt.Println("prop set COMMIT")
-		}
+	// And send it
+	if err := transaction.Commit(); err != nil {
+		return err
+	}
 
-		// And send it
-		propSetErr = transaction.Commit()
-
-		if Verbose {
-			fmt.Println("prop set DONE")
-		}
-	}()
+	if Verbose {
+		fmt.Println("prop set DONE")
+	}
 
 	// Start one goroutine + transaction for the recognized owners
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 
-		if Verbose {
-			fmt.Println("recognized owners START")
-		}
+	if Verbose {
+		fmt.Println("recognized owners START")
+	}
 
-		// Create a new transaction
-		transaction, err := hm2.host.db.BeginTx(ctx, nil)
-		if err != nil {
-			updateErr = err
-			return
-		}
+	// Create a new transaction
+	transaction, err = hm2.host.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
 
-		// Then update all recognized owners
-		for _, owner := range recognizedOwners {
-			// Prepare the changes
-			for k, value := range allProperties[owner] {
-				if Verbose {
-					fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
-				}
-				// Set a key + value for this "owner¤key"
-				if !kv.host.rawUTF8 {
-					Encode(&value)
-				}
-				encodedValue := value
-				if _, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+k, encodedValue); err != nil {
-					transaction.Rollback()
-					updateErr = err
-					return
-				}
+	// Then update all recognized owners
+	for _, owner := range recognizedOwners {
+		// Prepare the changes
+		for k, value := range allProperties[owner] {
+			if Verbose {
+				fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
 			}
-		}
-
-		if Verbose {
-			fmt.Println("recognized owners COMMIT")
-		}
-
-		// And send it
-		updateErr = transaction.Commit()
-
-		if Verbose {
-			fmt.Println("recognized owners DONE")
-		}
-	}()
-
-	// Start one goroutine + transaction for the unrecognized owners
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		if Verbose {
-			fmt.Println("unrecognized owners START")
-		}
-
-		// Create a new transaction
-		transaction, err := hm2.host.db.BeginTx(ctx, nil)
-		if err != nil {
-			insertErr = err
-			return
-		}
-
-		// Then update all unrecognized owners
-		for _, owner := range unrecognizedOwners {
-			// Add the owner to the set of owners in the database
-			if err := ownerSet.addWithTransaction(ctx, transaction, owner); err != nil {
+			// Set a key + value for this "owner¤key"
+			if !kv.host.rawUTF8 {
+				Encode(&value)
+			}
+			encodedValue := value
+			if _, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+k, encodedValue); err != nil {
 				transaction.Rollback()
-				insertErr = err
-				return
-			}
-			// Prepare the changes
-			for k, value := range allProperties[owner] {
-				if Verbose {
-					fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
-				}
-				// Set a key + value for this "owner¤key"
-				if !kv.host.rawUTF8 {
-					Encode(&value)
-				}
-				encodedValue := value
-				if _, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+k, encodedValue); err != nil {
-					transaction.Rollback()
-					insertErr = err
-					return
-				}
+				return err
 			}
 		}
+	}
 
-		if Verbose {
-			fmt.Println("unrecognized owners COMMIT")
+	if Verbose {
+		fmt.Println("recognized owners COMMIT")
+	}
+
+	// And send it
+	if err := transaction.Commit(); err != nil {
+		return err
+	}
+
+	if Verbose {
+		fmt.Println("recognized owners DONE")
+	}
+
+	if Verbose {
+		fmt.Println("unrecognized owners START")
+	}
+
+	// Then update/insert all unrecognized owners
+	for _, owner := range unrecognizedOwners {
+		// Add the owner to the set of owners in the database
+		if err := ownerSet.Add(owner); err != nil {
+			return err
 		}
-
-		// And send it
-		insertErr = transaction.Commit()
-
-		if Verbose {
-			fmt.Println("unrecognized owners DONE")
+		// Prepare the changes
+		for k, value := range allProperties[owner] {
+			if Verbose {
+				fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
+			}
+			// Set the key+value
+			if err := kv.Set(owner+fieldSep+k, value); err != nil {
+				return err
+			}
 		}
-	}()
+	}
 
-	wg.Wait()
+	if Verbose {
+		fmt.Println("unrecognized owners DONE")
+	}
 
 	if Verbose {
 		fmt.Println("SetLargeMap DONE")
 	}
 
-	// Check the error values
-	if updateErr != nil {
-		return updateErr
-	}
-	if insertErr != nil {
-		return insertErr
-	}
-	if propSetErr != nil {
-		return propSetErr
-	}
 	return nil // success
 }
 
