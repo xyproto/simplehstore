@@ -171,5 +171,5 @@ func noResult(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	return strings.HasSuffix(msg, "does not exist") || strings.Contains(msg, "no rows")
+	return strings.Contains(msg, "does not exist") || strings.Contains(msg, "no rows")
 }

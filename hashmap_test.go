@@ -292,11 +292,13 @@ func TestConfirmed(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	ok, err = users.Has("bob", "confirmed")
-	if err != nil {
-		t.Error(err)
-	}
-	if ok {
+	if ok, err := users.Has("bob", "confirmed"); err != nil {
+		if noResult(err) {
+			fmt.Println("good")
+		} else {
+			t.Error(err)
+		}
+	} else if ok {
 		t.Error("The confirmed key should be gone")
 	}
 }

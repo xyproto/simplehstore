@@ -37,7 +37,7 @@ func (s *Set) Add(value string) error {
 	}
 	// Check that the value is not already there before adding
 	has, err := s.Has(originalValue)
-	if !has && (err == nil) {
+	if !has || noResult(err) {
 		_, err = s.host.db.Exec(fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", s.table, setCol), value)
 	}
 	return err
@@ -51,7 +51,7 @@ func (s *Set) addWithTransaction(ctx context.Context, transaction *sql.Tx, value
 	}
 	// Check that the value is not already there before adding
 	has, err := s.Has(originalValue)
-	if !has && (err == nil) {
+	if !has || noResult(err) {
 		_, err = transaction.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", s.table, setCol), value)
 	}
 	return err
