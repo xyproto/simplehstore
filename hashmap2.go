@@ -73,8 +73,8 @@ func (hm2 *HashMap2) setPropWithTransaction(ctx context.Context, transaction *sq
 			return fmt.Errorf("key can not contain %s", fieldSep)
 		}
 	}
-	// Add the key to the property set
-	if err := hm2.PropSet().addWithTransaction(ctx, transaction, key); err != nil {
+	// Add the key to the property set, without using a transaction
+	if err := hm2.PropSet().Add(key); err != nil {
 		return err
 	}
 	// Set a key + value for this "owner¤key"
@@ -105,7 +105,7 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 	}
 
 	// Add the owner to the set
-	if err := hm2.OwnerSet().addWithTransaction(ctx, transaction, owner); err != nil {
+	if err := hm2.OwnerSet().Add(owner); err != nil {
 		transaction.Rollback()
 		return err
 	}
@@ -117,7 +117,7 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 			return err
 		}
 		if !hasS(allProperties, k) {
-			if err := propset.addWithTransaction(ctx, transaction, k); err != nil {
+			if err := propset.Add(k); err != nil {
 				transaction.Rollback()
 				return err
 			}
@@ -131,9 +131,6 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 // These must all be brand new "usernames" (the first key), and not be in the existing hm2.OwnerSet().
 // This function has good performance, but must be used carefully.
 func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) error {
-	if Verbose {
-		fmt.Println("SetLargeMap START")
-	}
 
 	// First get the KeyValue and Set structures that will be used
 	ownerSet := hm2.OwnerSet()
@@ -170,10 +167,6 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		}
 	}
 
-	if Verbose {
-		fmt.Println("prop set START")
-	}
-
 	// Store all properties (should be a low number)
 	for _, prop := range props {
 		if Verbose {
@@ -182,10 +175,6 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		if err := propSet.Add(prop); err != nil {
 			return err
 		}
-	}
-
-	if Verbose {
-		fmt.Println("prop set DONE")
 	}
 
 	ctx := context.Background()
@@ -257,10 +246,6 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	}
 	if Verbose {
 		fmt.Println("unrecognized owners DONE")
-	}
-
-	if Verbose {
-		fmt.Println("SetLargeMap DONE")
 	}
 
 	return nil // success
