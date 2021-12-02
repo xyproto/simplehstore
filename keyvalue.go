@@ -220,11 +220,9 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	if err := rows.Err(); err != nil {
 		return "", fmt.Errorf("keyValue Get: rows.Err(): %s", err)
 	}
-
 	if counter == 0 {
 		return "", errors.New("keyValue Get: no rows")
 	}
-
 	if counter != 1 {
 		return "", fmt.Errorf("keyValue Get: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
 	}
@@ -233,6 +231,9 @@ func (kv *KeyValue) Get(key string) (string, error) {
 	if !kv.host.rawUTF8 {
 		Decode(&s)
 	}
+	if s == "" {
+		return "", errors.New("key does not exist")
+	}
 	return s, nil
 }
 
@@ -240,10 +241,10 @@ func (kv *KeyValue) Get(key string) (string, error) {
 func (kv *KeyValue) getWithTransaction(ctx context.Context, transaction *sql.Tx, key string) (string, error) {
 	rows, err := transaction.QueryContext(ctx, fmt.Sprintf("SELECT attr -> '%s' FROM %s", escapeSingleQuotes(key), pq.QuoteIdentifier(kvPrefix+kv.table)))
 	if err != nil {
-		return "", fmt.Errorf("KeyValue.Get: query error: %s", err)
+		return "", fmt.Errorf("KeyValue getWithTransaction: query error: %s", err)
 	}
 	if rows == nil {
-		return "", fmt.Errorf("KeyValue.Get: no rows for key %s", key)
+		return "", fmt.Errorf("KeyValue getWithTransaction: no rows for key %s", key)
 	}
 	defer rows.Close()
 	var value sql.NullString
@@ -257,20 +258,22 @@ func (kv *KeyValue) getWithTransaction(ctx context.Context, transaction *sql.Tx,
 		counter++
 	}
 	if err := rows.Err(); err != nil {
-		return "", fmt.Errorf("keyValue Get: rows.Err(): %s", err)
+		return "", fmt.Errorf("keyValue getWithTransaction: rows.Err(): %s", err)
 	}
 
 	if counter == 0 {
-		return "", errors.New("keyValue Get: no rows")
+		return "", errors.New("keyValue getWithTransaction: no rows")
 	}
 
 	if counter != 1 {
-		return "", fmt.Errorf("keyValue Get: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
+		return "", fmt.Errorf("keyValue getWithTransaction: wrong number of keys in KeyValue table: %s", kvPrefix+kv.table)
 	}
-
 	s := value.String
 	if !kv.host.rawUTF8 {
 		Decode(&s)
+	}
+	if s == "" {
+		return "", errors.New("key does not exist")
 	}
 	return s, nil
 }
