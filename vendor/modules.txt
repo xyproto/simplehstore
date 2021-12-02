@@ -2,6 +2,8 @@
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
+# github.com/xyproto/ask v1.0.0
+github.com/xyproto/ask
 # github.com/xyproto/cookie v0.0.0-20181220103240-f4de411f45ff
 github.com/xyproto/cookie
 # github.com/xyproto/env v1.7.0
