@@ -232,7 +232,7 @@ func (kv *KeyValue) Get(key string) (string, error) {
 		Decode(&s)
 	}
 	if s == "" {
-		return "", errors.New("key does not exist")
+		return "", fmt.Errorf("key does not exist: %s", key)
 	}
 	return s, nil
 }
@@ -273,7 +273,7 @@ func (kv *KeyValue) getWithTransaction(ctx context.Context, transaction *sql.Tx,
 		Decode(&s)
 	}
 	if s == "" {
-		return "", errors.New("key does not exist")
+		return "", fmt.Errorf("key does not exist: %s", key)
 	}
 	return s, nil
 }
