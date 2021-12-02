@@ -12,42 +12,50 @@ import (
 func checkError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	} else {
-		fmt.Println("SUCCESS")
 	}
+	fmt.Println("ok")
 }
 
 func checkStringError(s string, err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	} else {
-		fmt.Println(s)
 	}
+	fmt.Println(s)
 }
 
 func checkBoolError(b bool, err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	} else {
-		fmt.Println(b)
+		return
 	}
+	fmt.Println(b)
 }
 
 func checkSliceError(xs []string, err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	} else {
-		fmt.Println(strings.Join(xs, "\n"))
+		return
 	}
+	if len(xs) == 0 {
+		fmt.Println("No results")
+		return
+	}
+	// Print the slice
+	fmt.Println(strings.Join(xs, "\n"))
 }
 
 func checkMapError(m map[string]string, err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	} else {
-		for k, v := range m {
-			fmt.Printf("%s -> %s\n", k, v)
-		}
+		return
+	}
+	if len(m) == 0 {
+		fmt.Println("No results")
+		return
+	}
+	// Print the map
+	for k, v := range m {
+		fmt.Printf("%s -> %s\n", k, v)
 	}
 }
 
@@ -83,6 +91,26 @@ LOOP:
 				} else {
 					fmt.Println("clear")
 				}
+			case "d":
+				if len(fields) == 2 {
+					checkError(hashmap.Del(fields[1]))
+				} else if len(fields) == 3 {
+					checkError(hashmap.DelKey(fields[1], fields[2]))
+				} else {
+					fmt.Println("d [o] [k]")
+				}
+			case "del":
+				if len(fields) == 2 {
+					checkError(hashmap.Del(fields[1]))
+				} else {
+					fmt.Println("del o")
+				}
+			case "delkey":
+				if len(fields) == 3 {
+					checkError(hashmap.DelKey(fields[1], fields[2]))
+				} else {
+					fmt.Println("delkey o k")
+				}
 			case "exists":
 				if len(fields) == 2 {
 					checkBoolError(hashmap.Exists(fields[1]))
@@ -95,6 +123,7 @@ LOOP:
 				} else {
 					fmt.Println("has o k")
 				}
+
 			case "keys":
 				if len(fields) == 2 {
 					checkSliceError(hashmap.Keys(fields[1]))
@@ -138,6 +167,13 @@ LOOP:
 			case "getmap":
 				if len(fields) >= 3 {
 					checkMapError(hashmap.GetMap(fields[1], fields[2:]))
+				} else if len(fields) == 2 {
+					keys, err := hashmap.Keys(fields[1])
+					if err != nil {
+						checkError(err)
+					} else {
+						checkMapError(hashmap.GetMap(fields[1], keys))
+					}
 				} else {
 					fmt.Println("getmap o k k k ...")
 				}
@@ -189,12 +225,18 @@ LOOP:
 				} else {
 					fmt.Println("remove")
 				}
+				fmt.Println("creating a new one")
+				hashmap, err = simplehstore.NewHashMap2(host, "devices")
+				checkError(err)
 			case "exit", "quit":
 				fmt.Println(strings.Title(fields[0]))
 				break LOOP
 			case "help", "?", "h":
 				fmt.Println("all - list all owners")
 				fmt.Println("clear - remove all data in this table")
+				fmt.Println("d o [k]")
+				fmt.Println("del o")
+				fmt.Println("delkey o k")
 				fmt.Println("exists o - check if owner exists")
 				fmt.Println("exit - exit the repl")
 				fmt.Println("get o k - get the value of a key of an owner")
