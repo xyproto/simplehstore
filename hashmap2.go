@@ -223,6 +223,7 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 
 	if Verbose {
 		fmt.Println("recognized owners COMMIT")
+		fmt.Println("QUERY: ", transaction)
 	}
 
 	// And send it
@@ -269,19 +270,7 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 // Returns: value, error
 // If a value was not found, an empty string is returned.
 func (hm2 *HashMap2) Get(owner, key string) (string, error) {
-	s, err := hm2.KeyValue().Get(owner + fieldSep + key)
-	if err != nil {
-		if noResult(err) {
-			return "", nil
-		}
-		return "", err
-	}
-	// No error and no value
-	if s == "" {
-		return s, nil
-	}
-	// No error and actually got a value
-	return s, nil
+	return hm2.KeyValue().Get(owner + fieldSep + key)
 }
 
 // Get multiple values
@@ -358,6 +347,11 @@ func (hm2 *HashMap2) AllWhere(key, value string) ([]string, error) {
 	return foundOwners, nil
 }
 
+// AllEncounteredKeys returns all encountered keys for all owners
+func (hm2 *HashMap2) AllEncounteredKeys() ([]string, error) {
+	return hm2.PropSet().All()
+}
+
 // Keys loops through absolutely all owners and all properties in the database
 // and returns all found keys.
 func (hm2 *HashMap2) Keys(owner string) ([]string, error) {
@@ -368,12 +362,8 @@ func (hm2 *HashMap2) Keys(owner string) ([]string, error) {
 	// TODO: Improve the performance of this by using SQL instead of looping
 	allKeys := []string{}
 	for _, key := range allProps {
-		fmt.Printf("HAS %s GOT %s? ", owner, key)
 		if found, err := hm2.Has(owner, key); err == nil && found {
-			fmt.Printf("YES\n")
 			allKeys = append(allKeys, key)
-		} else {
-			fmt.Printf("NO\n")
 		}
 	}
 	return allKeys, nil
