@@ -1,7 +1,6 @@
 package simplehstore
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -43,20 +42,6 @@ func (s *Set) Add(value string) error {
 	return err
 }
 
-// add an element to the set, as part of a transaction
-func (s *Set) addWithTransaction(ctx context.Context, transaction *sql.Tx, value string) error {
-	originalValue := value
-	if !s.host.rawUTF8 {
-		Encode(&value)
-	}
-	// Check that the value is not already there before adding
-	has, err := s.Has(originalValue)
-	if !has || noResult(err) {
-		_, err = transaction.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", s.table, setCol), value)
-	}
-	return err
-}
-
 // Has checks if the given value is in the set
 func (s *Set) Has(value string) (bool, error) {
 	if !s.host.rawUTF8 {
@@ -94,19 +79,23 @@ func (s *Set) Has(value string) (bool, error) {
 func (s *Set) All() ([]string, error) {
 	var (
 		values []string
-		value  string
+		value  sql.NullString
 	)
 	rows, err := s.host.db.Query(fmt.Sprintf("SELECT DISTINCT %s FROM %s", setCol, s.table))
 	if err != nil {
 		return values, err
 	}
+	if rows == nil {
+		return values, ErrNoAvailableValues
+	}
 	defer rows.Close()
 	for rows.Next() {
 		err = rows.Scan(&value)
+		vs := value.String
 		if !s.host.rawUTF8 {
-			Decode(&value)
+			Decode(&vs)
 		}
-		values = append(values, value)
+		values = append(values, vs)
 		if err != nil {
 			return values, err
 		}
