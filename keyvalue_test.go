@@ -65,6 +65,21 @@ func TestInc(t *testing.T) {
 	if err := kv.Set(testkey, testvalue0); err != nil {
 		t.Errorf("Error, could not set key and value! %s", err.Error())
 	}
+	if err := kv.Set(testkey+"2", testvalue0); err != nil {
+		t.Errorf("Error, could not set key and value! %s", err.Error())
+	}
+	if err := kv.Set(testkey+"3", testvalue0); err != nil {
+		t.Errorf("Error, could not set key and value! %s", err.Error())
+	}
+
+	allValues, err := kv.All()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(allValues) != 3 {
+		t.Error("should be 3 keys")
+	}
+
 	if val, err := kv.Get(testkey); err != nil {
 		t.Errorf("Error, could not get key! %s", err.Error())
 	} else if val != testvalue0 {

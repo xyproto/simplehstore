@@ -31,6 +31,11 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 	if Verbose {
 		log.Println("Created HSTORE table " + pq.QuoteIdentifier(kvPrefix+kv.table) + " in database " + host.dbname)
 	}
+
+	if err := kv.CreateIndexTable(); err != nil {
+		return nil, err
+	}
+
 	return kv, nil
 }
 
@@ -38,7 +43,7 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 func (kv *KeyValue) CreateIndexTable() error {
 	// strip double quotes from kv.table and add _idx at the end
 	indexTableName := strings.TrimSuffix(strings.TrimPrefix(kv.table, "\""), "\"") + "_idx"
-	query := fmt.Sprintf("CREATE INDEX %q ON %s USING GIN (attr)", indexTableName, kv.table)
+	query := fmt.Sprintf("CREATE INDEX %q ON %s USING GIN (attr)", indexTableName, pq.QuoteIdentifier(kvPrefix+kv.table))
 	if Verbose {
 		fmt.Println(query)
 	}
@@ -56,6 +61,39 @@ func (kv *KeyValue) RemoveIndexTable() error {
 	}
 	_, err := kv.host.db.Exec(query)
 	return err
+}
+
+// All returns all elements in the set
+func (kv *KeyValue) All() ([]string, error) {
+	var (
+		values []string
+		value  sql.NullString
+	)
+	query := fmt.Sprintf("SELECT DISTINCT skeys(attr) FROM %s", pq.QuoteIdentifier(kvPrefix+kv.table))
+	if Verbose {
+		fmt.Println(query)
+	}
+	rows, err := kv.host.db.Query(query)
+	if err != nil {
+		return values, err
+	}
+	if rows == nil {
+		return values, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err = rows.Scan(&value)
+		vs := value.String
+		if !kv.host.rawUTF8 {
+			Decode(&vs)
+		}
+		values = append(values, vs)
+		if err != nil {
+			return values, err
+		}
+	}
+	err = rows.Err()
+	return values, err
 }
 
 // insert a new key+value in the current KeyValue table
