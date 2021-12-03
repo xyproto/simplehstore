@@ -250,6 +250,7 @@ LOOP:
 				break LOOP
 			case "help", "?", "h":
 				fmt.Println("all - list all owners")
+				fmt.Println("allwhere k v - list all owners where k == v")
 				fmt.Println("clear - remove all data in this table")
 				fmt.Println("d o [k]")
 				fmt.Println("del o")
