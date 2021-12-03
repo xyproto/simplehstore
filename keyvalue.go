@@ -32,9 +32,7 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 		log.Println("Created HSTORE table " + pq.QuoteIdentifier(kvPrefix+kv.table) + " in database " + host.dbname)
 	}
 
-	if err := kv.CreateIndexTable(); err != nil {
-		return nil, err
-	}
+	kv.CreateIndexTable()
 
 	return kv, nil
 }
@@ -70,9 +68,9 @@ func (kv *KeyValue) All() ([]string, error) {
 		value  sql.NullString
 	)
 	query := fmt.Sprintf("SELECT DISTINCT skeys(attr) FROM %s", pq.QuoteIdentifier(kvPrefix+kv.table))
-	if Verbose {
-		fmt.Println(query)
-	}
+	//if Verbose {
+	//fmt.Println(query)
+	//}
 	rows, err := kv.host.db.Query(query)
 	if err != nil {
 		return values, err
@@ -391,4 +389,46 @@ func (kv *KeyValue) Clear() error {
 	// Truncate the table
 	_, err := kv.host.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s", pq.QuoteIdentifier(kvPrefix+kv.table)))
 	return err
+}
+
+// Count counts the number of keys
+func (kv *KeyValue) Count() (int, error) {
+	var value sql.NullInt32
+	query := fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT skeys(attr) FROM %s) as temp", pq.QuoteIdentifier(kvPrefix+kv.table))
+	rows, err := kv.host.db.Query(query)
+	if err != nil {
+		return 0, err
+	}
+	if rows == nil {
+		return 0, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return int(value.Int32), nil
+}
+
+// Count counts the number of keys
+func (kv *KeyValue) CountInt64() (int64, error) {
+	var value sql.NullInt64
+	query := fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT skeys(attr) FROM %s) as temp", pq.QuoteIdentifier(kvPrefix+kv.table))
+	rows, err := kv.host.db.Query(query)
+	if err != nil {
+		return 0, err
+	}
+	if rows == nil {
+		return 0, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return value.Int64, nil
 }

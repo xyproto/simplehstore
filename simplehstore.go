@@ -63,7 +63,6 @@ var (
 	setCol   = "a_set"
 	ownerCol = "owner"
 	kvPrefix = "a_kv_"
-	jmPrefix = "jm_"
 )
 
 // SetColumnNames can be used to change the column names and prefixes that are used in the PostgreSQL tables.
