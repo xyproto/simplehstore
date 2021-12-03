@@ -3,6 +3,7 @@ package simplehstore
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -271,35 +272,68 @@ func (hm2 *HashMap2) Has(owner, key string) (bool, error) {
 
 // Exists checks if a given owner exists as a hash map at all.
 func (hm2 *HashMap2) Exists(owner string) (bool, error) {
-	// Looking up the owner directly is tricky, but with a property, it's faster.
-	allProps, err := hm2.PropSet().All()
+	kv := hm2.KeyValue()
+	query := fmt.Sprintf("SELECT SUBSTRING(skeys,'(.*)¤') FROM (SELECT skeys(attr), svals(attr) FROM %s) AS temp WHERE skeys LIKE '%s¤%%' LIMIT 1",
+		pq.QuoteIdentifier(kvPrefix+kv.table),
+		owner,
+	)
+	rows, err := kv.host.db.Query(query)
 	if err != nil {
 		return false, err
 	}
-	// TODO: Improve the performance of this by using SQL instead of looping
-	for _, key := range allProps {
-		if found, err := hm2.Has(owner, key); err == nil && found {
-			return true, nil
-		}
+	if rows == nil {
+		return false, errors.New("hashMap2 Exists returned no rows for owner " + owner)
 	}
-	return false, nil
+	defer rows.Close()
+	var scanValue sql.NullString
+	// Get the value. Should not loop more than once.
+	counter := 0
+	for rows.Next() {
+		err = rows.Scan(&scanValue)
+		if err != nil {
+			// No rows
+			return false, err
+		}
+		counter++
+	}
+	if err := rows.Err(); err != nil {
+		return false, err
+	}
+	return counter > 0, nil
 }
 
 // AllWhere returns all owner ID's that has a property where key == value
 func (hm2 *HashMap2) AllWhere(key, value string) ([]string, error) {
-	allOwners, err := hm2.All()
+	kv := hm2.KeyValue()
+	if !kv.host.rawUTF8 {
+		Encode(&value)
+	}
+	query := fmt.Sprintf("SELECT SUBSTRING(skeys,'(.*)%s') FROM (SELECT skeys(attr), svals(attr) FROM %s) AS temp WHERE skeys LIKE '%%¤%s' AND svals = '%s'",
+		fieldSep,
+		pq.QuoteIdentifier(kvPrefix+kv.table),
+		key,
+		value,
+	)
+	rows, err := kv.host.db.Query(query)
 	if err != nil {
 		return []string{}, err
 	}
-	// TODO: Improve the performance of this by using SQL instead of looping
-	foundOwners := []string{}
-	for _, owner := range allOwners {
-		// The owner+key exists and the value matches the given value
-		if v, err := hm2.Get(owner, key); err == nil && v == value {
-			foundOwners = append(foundOwners, owner)
+	if rows == nil {
+		return []string{}, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	var v sql.NullString
+	var values []string
+	for rows.Next() {
+		err = rows.Scan(&v)
+		vs := v.String
+		values = append(values, vs)
+		if err != nil {
+			return values, err
 		}
 	}
-	return foundOwners, nil
+	err = rows.Err()
+	return values, err
 }
 
 // AllEncounteredKeys returns all encountered keys for all owners
