@@ -89,6 +89,12 @@ LOOP:
 				} else {
 					fmt.Println("all")
 				}
+			case "allwhere":
+				if len(fields) == 3 {
+					checkSliceError(hashmap.AllWhere(fields[1], fields[2]))
+				} else {
+					fmt.Println("allwhere k v")
+				}
 			case "clear":
 				if len(fields) == 1 {
 					checkError(hashmap.Clear())
