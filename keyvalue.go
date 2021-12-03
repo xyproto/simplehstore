@@ -68,9 +68,6 @@ func (kv *KeyValue) All() ([]string, error) {
 		value  sql.NullString
 	)
 	query := fmt.Sprintf("SELECT DISTINCT skeys(attr) FROM %s", pq.QuoteIdentifier(kvPrefix+kv.table))
-	//if Verbose {
-	//fmt.Println(query)
-	//}
 	rows, err := kv.host.db.Query(query)
 	if err != nil {
 		return values, err
