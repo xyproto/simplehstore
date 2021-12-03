@@ -60,8 +60,12 @@ func checkMapError(m map[string]string, err error) {
 }
 
 func main() {
-
-	host := simplehstore.New() // locally
+	var host *simplehstore.Host
+	if len(os.Args) > 1 && strings.HasSuffix(os.Args[1], "d") {
+		host = simplehstore.NewHost("postgres@127.0.0.1:5432/devices?sslmode=disable")
+	} else {
+		host = simplehstore.New() // locally
+	}
 	defer host.Close()
 
 	host.SetRawUTF8(true)
