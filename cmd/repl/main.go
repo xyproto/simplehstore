@@ -65,8 +65,8 @@ func main() {
 	defer host.Close()
 
 	host.SetRawUTF8(true)
-
 	simplehstore.Verbose = true
+
 	hashmap, err := simplehstore.NewHashMap2(host, "devices")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
