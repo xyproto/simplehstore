@@ -1,6 +1,7 @@
 package simplehstore
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -39,6 +40,15 @@ func (s *Set) Add(value string) error {
 	if !has || noResult(err) {
 		_, err = s.host.db.Exec(fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", s.table, setCol), value)
 	}
+	return err
+}
+
+// Add an element to the set, with a transaction, without checking if it exists already
+func (s *Set) addWithTransactionNoCheck(ctx context.Context, transaction *sql.Tx, value string) error {
+	if !s.host.rawUTF8 {
+		Encode(&value)
+	}
+	_, err := transaction.Exec(fmt.Sprintf("INSERT INTO %s (%s) VALUES ($1)", s.table, setCol), value)
 	return err
 }
 

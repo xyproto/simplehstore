@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
+
+	"github.com/lib/pq"
 )
 
 // HashMap2 contains a KeyValue struct and a dbDatastructure.
@@ -135,19 +138,7 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		}
 	}
 
-	// Store the new properties
-	for _, prop := range newProps {
-		if Verbose {
-			fmt.Printf("ADDING %s\n", prop)
-		}
-		if err := propSet.Add(prop); err != nil {
-			return err
-		}
-	}
-
 	ctx := context.Background()
-
-	// Start one goroutine + transaction for the recognized owners
 
 	if Verbose {
 		fmt.Println("Starting transaction")
@@ -159,23 +150,50 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		return err
 	}
 
-	// Then update all recognized owners
-	for owner, propMap := range allProperties {
-		// Prepare the changes
-		for k, value := range propMap {
-			if Verbose {
-				fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
-			}
-			// Set a key + value for this "owner¤key"
-			if !kv.host.rawUTF8 {
-				Encode(&value)
-			}
-			encodedValue := value
-			if _, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+k, encodedValue); err != nil {
-				transaction.Rollback()
-				return err
-			}
+	// Store the new properties
+	for _, prop := range newProps {
+		if Verbose {
+			fmt.Printf("ADDING %s\n", prop)
 		}
+		if err := propSet.addWithTransactionNoCheck(ctx, transaction, prop); err != nil {
+			return err
+		}
+	}
+
+	// Build a long key+value string
+	var sb strings.Builder
+	beyondFirst := false
+	for owner, propMap := range allProperties {
+		for k, v := range propMap {
+			if beyondFirst {
+				sb.WriteString(",")
+			} else {
+				beyondFirst = true
+			}
+			if !kv.host.rawUTF8 {
+				Encode(&v)
+			}
+			sb.WriteString("\"" + owner + fieldSep + k + "\"=>\"" + v + "\"")
+		}
+	}
+
+	// Try setting+updating all values, in a transaction
+	query := fmt.Sprintf("UPDATE %s SET attr = attr || '%s' :: hstore", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(sb.String()))
+	if Verbose {
+		fmt.Println(query)
+	}
+	result, err := transaction.ExecContext(ctx, query)
+	if Verbose {
+		log.Println("Updated row in: "+kv.table+" err? ", err)
+	}
+	if result == nil {
+		transaction.Rollback()
+		return fmt.Errorf("keyValue updateWithTransaction: no result when updating with %s", sb.String())
+	}
+	_, err = result.RowsAffected()
+	if err != nil {
+		transaction.Rollback()
+		return err
 	}
 
 	if Verbose {
