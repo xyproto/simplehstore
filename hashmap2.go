@@ -127,6 +127,8 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		return err
 	}
 
+	databaseIsEmpty := len(props) == 0
+
 	// Find new properties in the allProperties map
 	var newProps []string
 	for owner := range allProperties {
@@ -177,8 +179,14 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		}
 	}
 
-	// Try setting+updating all values, in a transaction
-	query := fmt.Sprintf("UPDATE %s SET attr = attr || '%s' :: hstore", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(sb.String()))
+	var query string
+	if databaseIsEmpty {
+		// Try inserting all values, in a transaction
+		query = fmt.Sprintf("INSERT INTO %s (attr) VALUES ('%s')", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(sb.String()))
+	} else {
+		// Try setting+updating all values, in a transaction
+		query = fmt.Sprintf("UPDATE %s SET attr = attr || '%s' :: hstore", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(sb.String()))
+	}
 	if Verbose {
 		fmt.Println(query)
 	}
