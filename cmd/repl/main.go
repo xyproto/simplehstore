@@ -115,12 +115,19 @@ LOOP:
 				} else {
 					fmt.Println("delkey o k")
 				}
+			case "empty":
+				if len(fields) == 1 {
+					checkBoolError(hashmap.Empty())
+				} else {
+					fmt.Println("empty")
+				}
 			case "exists":
 				if len(fields) == 2 {
 					checkBoolError(hashmap.Exists(fields[1]))
 				} else {
 					fmt.Println("exists o")
 				}
+
 			case "has":
 				if len(fields) == 3 {
 					checkBoolError(hashmap.Has(fields[1], fields[2]))
@@ -241,6 +248,7 @@ LOOP:
 				fmt.Println("d o [k]")
 				fmt.Println("del o")
 				fmt.Println("delkey o k")
+				fmt.Println("empty - check if the table is empty")
 				fmt.Println("exists o - check if owner exists")
 				fmt.Println("exit - exit the repl")
 				fmt.Println("get o k - get the value of a key of an owner")

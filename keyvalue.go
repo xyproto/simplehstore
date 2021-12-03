@@ -432,3 +432,24 @@ func (kv *KeyValue) CountInt64() (int64, error) {
 	}
 	return value.Int64, nil
 }
+
+// Empty checks if there are no keys, in an efficient way
+func (kv *KeyValue) Empty() (bool, error) {
+	var value sql.NullInt64
+	query := fmt.Sprintf("SELECT COUNT(*) FROM (SELECT attr FROM %s LIMIT 1) as temp", pq.QuoteIdentifier(kvPrefix+kv.table))
+	rows, err := kv.host.db.Query(query)
+	if err != nil {
+		return true, err
+	}
+	if rows == nil {
+		return true, ErrNoAvailableValues
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&value)
+		if err != nil {
+			return true, err
+		}
+	}
+	return value.Int64 == 0, nil // the count of either 0 elements, or the first 1 elements (LIMIT 1), is empty
+}
