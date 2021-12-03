@@ -127,7 +127,11 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		return err
 	}
 
-	databaseIsEmpty := len(props) == 0
+	// Check if the KeyValue table is empty or not
+	kvIsEmpty, err := kv.Empty()
+	if err != nil {
+		return err
+	}
 
 	// Find new properties in the allProperties map
 	var newProps []string
@@ -180,7 +184,7 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	}
 
 	var query string
-	if databaseIsEmpty {
+	if kvIsEmpty {
 		// Try inserting all values, in a transaction
 		query = fmt.Sprintf("INSERT INTO %s (attr) VALUES ('%s')", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(sb.String()))
 	} else {
@@ -402,4 +406,9 @@ func (hm2 *HashMap2) Clear() error {
 		return err
 	}
 	return nil
+}
+
+// Empty checks if there are no owners+keys+values
+func (hm2 *HashMap2) Empty() (bool, error) {
+	return hm2.KeyValue().Empty()
 }
