@@ -24,7 +24,7 @@ func NewKeyValue(host *Host, name string) (*KeyValue, error) {
 	// Ignore erors if this is already created
 	kv.host.db.Exec(query)
 
-	query = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (attr hstore)", pq.QuoteIdentifier(kvPrefix+kv.table))
+	query = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (attr hstore default hstore(''))", pq.QuoteIdentifier(kvPrefix+kv.table))
 	if _, err := kv.host.db.Exec(query); err != nil {
 		return nil, err
 	}
@@ -140,6 +140,7 @@ func (kv *KeyValue) update(key, encodedValue string) (int64, error) {
 }
 
 // update a value in the current KeyValue table, as part of a transaction
+// NOTE that the database must have an initialized hstore, possibly by using insert, before calling this!
 func (kv *KeyValue) updateWithTransaction(ctx context.Context, transaction *sql.Tx, key, encodedValue string) (int64, error) {
 	// Try updating
 	query := fmt.Sprintf("UPDATE %s SET attr = attr || '\"%s\"=>\"%s\"' :: hstore", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(key), escapeSingleQuotes(encodedValue))
@@ -163,71 +164,29 @@ func (kv *KeyValue) Set(key, value string) error {
 		Encode(&value)
 	}
 	encodedValue := value
-	// First try updating the key/values
-	n, err := kv.update(key, encodedValue)
+
+	isEmpty, err := kv.Empty()
 	if err != nil {
 		return err
 	}
-	// If no rows are affected (SELECTED) by the update, try inserting a row instead
-	if n == 0 {
-		n, err = kv.insert(key, encodedValue)
+
+	if isEmpty { // insert the first one if the KeyValue is currently empty
+		n, err := kv.insert(key, encodedValue)
 		if err != nil {
 			return err
 		}
 		if n == 0 {
-			return errors.New("keyValue Set: could not update or insert any rows")
+			return errors.New("keyValue Set: could not insert any rows")
 		}
-	}
-	// success
-	return nil
-}
-
-// set a key and value, as part of a transaction
-func (kv *KeyValue) setWithTransaction(ctx context.Context, transaction *sql.Tx, key, encodedValue string) error {
-	// First try updating the key/values
-	n, err := kv.updateWithTransaction(ctx, transaction, key, encodedValue)
-	if err != nil {
-		return err
-	}
-	// If no rows are affected (SELECTED) by the update, try inserting a row instead
-	if n == 0 {
-		n, err = kv.insertWithTransaction(ctx, transaction, key, encodedValue)
+	} else {
+		// Try updating the key/values
+		_, err := kv.update(key, encodedValue)
 		if err != nil {
 			return err
 		}
-		if n == 0 {
-			return errors.New("could not update or insert any rows")
-		}
 	}
 	// success
 	return nil
-}
-
-// SetCheck will set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
-// Returns true if the key already existed.
-func (kv *KeyValue) SetCheck(key, value string) (bool, error) {
-	if !kv.host.rawUTF8 {
-		Encode(&value)
-	}
-	encodedValue := value
-	// First try updating the key/values
-	n, err := kv.update(key, encodedValue)
-	if err != nil {
-		return false, err
-	}
-	// If no rows are affected (SELECTED) by the update, try inserting a row instead
-	if n == 0 {
-		n, err = kv.insert(key, encodedValue)
-		if err != nil {
-			return false, err
-		}
-		if n == 0 {
-			return false, errors.New("could not update or insert any rows")
-		}
-		return false, nil
-	}
-	// success, and the key already existed
-	return true, nil
 }
 
 // Get a value given a key
@@ -409,7 +368,7 @@ func (kv *KeyValue) Count() (int, error) {
 	return int(value.Int32), nil
 }
 
-// Count counts the number of keys
+// CountInt64 counts the number of keys
 func (kv *KeyValue) CountInt64() (int64, error) {
 	var value sql.NullInt64
 	query := fmt.Sprintf("SELECT COUNT(*) FROM (SELECT DISTINCT skeys(attr) FROM %s) as temp", pq.QuoteIdentifier(kvPrefix+kv.table))

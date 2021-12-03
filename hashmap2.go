@@ -55,8 +55,9 @@ func (hm2 *HashMap2) Set(owner, key, value string) error {
 	return hm2.SetMap(owner, map[string]string{key: value})
 }
 
-// setPropWithTransaction will set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
-func (hm2 *HashMap2) setPropWithTransaction(ctx context.Context, transaction *sql.Tx, owner, key, value string, checkForFieldSep bool) error {
+// updatePropWithTransaction will set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
+// Note that the database can not be empty when calling this! The HSTORE must be initialized first, possibly with an INSERT!
+func (hm2 *HashMap2) updatePropWithTransaction(ctx context.Context, transaction *sql.Tx, owner, key, value string, checkForFieldSep bool) error {
 	if checkForFieldSep {
 		if strings.Contains(owner, fieldSep) {
 			return fmt.Errorf("owner can not contain %s", fieldSep)
@@ -75,7 +76,33 @@ func (hm2 *HashMap2) setPropWithTransaction(ctx context.Context, transaction *sq
 		Encode(&value)
 	}
 	encodedValue := value
-	return kv.setWithTransaction(ctx, transaction, owner+fieldSep+key, encodedValue)
+	_, err := kv.updateWithTransaction(ctx, transaction, owner+fieldSep+key, encodedValue)
+	return err
+}
+
+// insertPropWithTransaction will set a value in a hashmap given the element id (for instance a user id) and the key (for instance "password")
+// Note that the database can not be empty when calling this! The HSTORE must be initialized first, possibly with an INSERT!
+func (hm2 *HashMap2) insertPropWithTransaction(ctx context.Context, transaction *sql.Tx, owner, key, value string, checkForFieldSep bool) error {
+	if checkForFieldSep {
+		if strings.Contains(owner, fieldSep) {
+			return fmt.Errorf("owner can not contain %s", fieldSep)
+		}
+		if strings.Contains(key, fieldSep) {
+			return fmt.Errorf("key can not contain %s", fieldSep)
+		}
+	}
+	// Add the key to the property set, without using a transaction
+	if err := hm2.PropSet().Add(key); err != nil {
+		return err
+	}
+	// Set a key + value for this "owner¤key"
+	kv := hm2.KeyValue()
+	if !kv.host.rawUTF8 {
+		Encode(&value)
+	}
+	encodedValue := value
+	_, err := kv.insertWithTransaction(ctx, transaction, owner+fieldSep+key, encodedValue)
+	return err
 }
 
 // SetMap will set many keys/values, in a single transaction
@@ -89,6 +116,11 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 		return err
 	}
 
+	isEmpty, err := hm2.KeyValue().Empty()
+	if err != nil {
+		return err
+	}
+
 	// Use a context and a transaction to bundle queries
 	ctx := context.Background()
 	transaction, err := hm2.host.db.BeginTx(ctx, nil)
@@ -96,9 +128,30 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 		return err
 	}
 
+	insertedKey := ""
+	if isEmpty { // Insert just one key, to initialize the HSTORE value
+		// Prepare the changes
+		for k, v := range m {
+			if err := hm2.insertPropWithTransaction(ctx, transaction, owner, k, v, checkForFieldSep); err != nil {
+				transaction.Rollback()
+				return err
+			}
+			if !hasS(allProperties, k) {
+				if err := propset.Add(k); err != nil {
+					transaction.Rollback()
+					return err
+				}
+			}
+			insertedKey = k
+			break
+		}
+	}
 	// Prepare the changes
-	for k, v := range m {
-		if err := hm2.setPropWithTransaction(ctx, transaction, owner, k, v, checkForFieldSep); err != nil {
+	for k, v := range m { // Update the rest
+		if k == insertedKey {
+			continue
+		}
+		if err := hm2.updatePropWithTransaction(ctx, transaction, owner, k, v, checkForFieldSep); err != nil {
 			transaction.Rollback()
 			return err
 		}
@@ -109,6 +162,7 @@ func (hm2 *HashMap2) SetMap(owner string, m map[string]string) error {
 			}
 		}
 	}
+
 	return transaction.Commit()
 }
 
@@ -129,7 +183,7 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	}
 
 	// Check if the KeyValue table is empty or not
-	kvIsEmpty, err := kv.Empty()
+	isEmpty, err := kv.Empty()
 	if err != nil {
 		return err
 	}
@@ -167,11 +221,20 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		}
 	}
 
+	var (
+		sb                     strings.Builder
+		beyondFirst            bool
+		firstO, firstK, firstV string
+	)
+
 	// Build a long key+value string
-	var sb strings.Builder
-	beyondFirst := false
 	for owner, propMap := range allProperties {
 		for k, v := range propMap {
+			if firstO == "" {
+				firstO = owner
+				firstK = k
+				firstV = v
+			}
 			if beyondFirst {
 				sb.WriteString(",")
 			} else {
@@ -184,14 +247,17 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 		}
 	}
 
-	var query string
-	if kvIsEmpty {
-		// Try inserting all values, in a transaction
-		query = fmt.Sprintf("INSERT INTO %s (attr) VALUES ('%s')", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(sb.String()))
-	} else {
-		// Try setting+updating all values, in a transaction
-		query = fmt.Sprintf("UPDATE %s SET attr = attr || '%s' :: hstore", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(sb.String()))
+	// Initialize the HSTORE, if needed
+	if isEmpty && firstO != "" && firstK != "" && firstV != "" {
+		encodedValue := firstV
+		if !kv.host.rawUTF8 {
+			Encode(&encodedValue)
+		}
+		kv.insert(firstO+fieldSep+firstK, encodedValue)
 	}
+
+	// Try setting+updating all values, in a transaction
+	query := fmt.Sprintf("UPDATE %s SET attr = attr || '%s' :: hstore", pq.QuoteIdentifier(kvPrefix+kv.table), escapeSingleQuotes(sb.String()))
 	if Verbose {
 		fmt.Println(query)
 	}
@@ -228,7 +294,7 @@ func (hm2 *HashMap2) Get(owner, key string) (string, error) {
 	return hm2.KeyValue().Get(owner + fieldSep + key)
 }
 
-// Get multiple values
+// GetMap can retrieve multiple values in one transaction
 func (hm2 *HashMap2) GetMap(owner string, keys []string) (map[string]string, error) {
 	results := make(map[string]string)
 
