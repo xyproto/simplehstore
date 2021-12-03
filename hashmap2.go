@@ -137,16 +137,6 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	kv := hm2.KeyValue()
 	propSet := hm2.PropSet()
 
-	// Get all existing owners
-	allOwners, err := ownerSet.All()
-	if err != nil {
-		return err
-	}
-
-	if Verbose {
-		fmt.Printf("Got all %d owners\n", len(allOwners))
-	}
-
 	// Find all unique properties
 	props := []string{}
 
@@ -154,7 +144,7 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	recognizedOwners := []string{}
 	unrecognizedOwners := []string{}
 	for owner := range allProperties {
-		if hasS(allOwners, owner) {
+		if exists, err := ownerSet.Has(owner); exists && err == nil {
 			recognizedOwners = append(recognizedOwners, owner)
 		} else {
 			unrecognizedOwners = append(unrecognizedOwners, owner)
