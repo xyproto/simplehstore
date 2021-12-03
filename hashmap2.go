@@ -118,28 +118,25 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	kv := hm2.KeyValue()
 	propSet := hm2.PropSet()
 
-	// Find all unique properties
-	props := []string{}
+	// All seen properties
+	props, err := propSet.All()
+	if err != nil {
+		return err
+	}
 
-	// Find all owners in allProperties that already exists, and those that doesn't.
-	recognizedOwners := []string{}
-	unrecognizedOwners := []string{}
+	// Find new properties in the allProperties map
+	var newProps []string
 	for owner := range allProperties {
-		if exists, err := hm2.Exists(owner); exists && err == nil {
-			recognizedOwners = append(recognizedOwners, owner)
-		} else {
-			unrecognizedOwners = append(unrecognizedOwners, owner)
-		}
 		// Find all unique properties
 		for k := range allProperties[owner] {
-			if !hasS(props, k) {
-				props = append(props, k)
+			if !hasS(props, k) && !hasS(newProps, k) {
+				newProps = append(newProps, k)
 			}
 		}
 	}
 
-	// Store all properties (should be a low number)
-	for _, prop := range props {
+	// Store the new properties
+	for _, prop := range newProps {
 		if Verbose {
 			fmt.Printf("ADDING %s\n", prop)
 		}
@@ -153,7 +150,7 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	// Start one goroutine + transaction for the recognized owners
 
 	if Verbose {
-		fmt.Println("recognized owners START")
+		fmt.Println("Starting transaction")
 	}
 
 	// Create a new transaction
@@ -163,9 +160,9 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	}
 
 	// Then update all recognized owners
-	for _, owner := range recognizedOwners {
+	for owner, propMap := range allProperties {
 		// Prepare the changes
-		for k, value := range allProperties[owner] {
+		for k, value := range propMap {
 			if Verbose {
 				fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
 			}
@@ -182,38 +179,13 @@ func (hm2 *HashMap2) SetLargeMap(allProperties map[string]map[string]string) err
 	}
 
 	if Verbose {
-		fmt.Println("recognized owners COMMIT")
-		fmt.Println("QUERY: ", transaction)
+		fmt.Println("Committing transaction")
 	}
-
-	// And send it
 	if err := transaction.Commit(); err != nil {
 		return err
 	}
 
-	if Verbose {
-		fmt.Println("recognized owners DONE")
-	}
-
-	if Verbose {
-		fmt.Println("unrecognized owners START")
-	}
-	// Then update/insert all unrecognized owners
-	for _, owner := range unrecognizedOwners {
-		// Prepare the changes
-		for k, value := range allProperties[owner] {
-			if Verbose {
-				fmt.Printf("SETTING %s %s->%s\n", owner, k, value)
-			}
-			// Set the key+value
-			if err := kv.Set(owner+fieldSep+k, value); err != nil {
-				return err
-			}
-		}
-	}
-	if Verbose {
-		fmt.Println("unrecognized owners DONE")
-	}
+	fmt.Println("Transaction complete")
 
 	return nil // success
 }
