@@ -8,7 +8,7 @@ github.com/xyproto/ask
 github.com/xyproto/cookie
 # github.com/xyproto/env v1.7.0
 github.com/xyproto/env
-# github.com/xyproto/pinterface v0.0.0-20211009195247-f633d6c15725
+# github.com/xyproto/pinterface v1.5.1
 github.com/xyproto/pinterface
 # github.com/xyproto/randomstring v0.0.0-20181222003104-0f764aabc45a
 github.com/xyproto/randomstring
