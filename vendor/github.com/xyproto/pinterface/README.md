@@ -17,6 +17,6 @@ Interfaces for:
 General information
 -------------------
 
-* Version: 1.5.1 (The tag is `v1.5.1` to work better with `go mod`. The API has version `5.1`.)
+* Version: 1.5.2 (The tag is `v1.5.2` to work better with `go mod`. The API has version `5.2`.)
 * License: BSD-3
 * Author: Alexander F. Rødseth &lt;xyproto@archlinux.org&gt;

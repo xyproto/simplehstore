@@ -563,6 +563,9 @@ func TestHashMap2(t *testing.T) {
 
 	// Check that hashmap qualifies for the IHashMap interface
 	var _ pinterface.IHashMap = hashmap
+
+	// Check that hashmap qualifies for the IHashMap2 interface as well
+	var _ pinterface.IHashMap2 = hashmap
 }
 
 func TestDashesAndQuotes2(t *testing.T) {
