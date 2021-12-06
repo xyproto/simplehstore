@@ -17,7 +17,7 @@ import (
 
 const (
 	// VersionString is the current version of simplehstore.
-	VersionString = "1.7.0"
+	VersionString = "1.8.0"
 
 	defaultStringType = "TEXT"
 	defaultPort       = 5432
