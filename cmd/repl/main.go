@@ -169,9 +169,9 @@ LOOP:
 					fmt.Println("l o")
 					fmt.Println("l o k")
 				}
-			case "p", "props", "encounteredkeys":
+			case "p", "props", "allkeys", "allpossiblekeys":
 				if len(fields) == 1 {
-					checkSliceError(hashmap.AllEncounteredKeys())
+					checkSliceError(hashmap.AllPossibleKeys())
 				} else {
 					fmt.Println("p")
 				}
