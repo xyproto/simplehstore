@@ -4,7 +4,7 @@ package pinterface
 import "net/http"
 
 // Version is the API version. The API is stable within the same major version number
-const Version = 5.2
+const Version = 5.3
 
 // Database interfaces
 
@@ -54,7 +54,7 @@ type IHashMap2 interface {
 	Keys(owner string) ([]string, error)
 	Remove() error
 	SetLargeMap(all map[string]map[string]string) error
-	SetMap(owner, m map[string]string) error
+	SetMap(owner string, m map[string]string) error
 	Set(owner, key, value string) error
 }
 
