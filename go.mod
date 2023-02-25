@@ -9,5 +9,5 @@ require (
 	github.com/xyproto/env v1.7.0
 	github.com/xyproto/pinterface v1.5.3
 	github.com/xyproto/randomstring v0.0.0-20181222003104-0f764aabc45a // indirect
-	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8
+	golang.org/x/crypto v0.1.0
 )
