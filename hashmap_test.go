@@ -10,7 +10,7 @@ import (
 	"crypto/sha256"
 	"io"
 
-	"github.com/xyproto/cookie"
+	"github.com/xyproto/cookie/v2"
 	"github.com/xyproto/pinterface"
 )
 
