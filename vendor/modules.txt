@@ -18,7 +18,7 @@ github.com/xyproto/pinterface
 # github.com/xyproto/randomstring v1.0.5
 ## explicit; go 1.17
 github.com/xyproto/randomstring
-# golang.org/x/crypto v0.1.0
-## explicit; go 1.17
+# golang.org/x/crypto v0.17.0
+## explicit; go 1.18
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
