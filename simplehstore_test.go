@@ -16,7 +16,7 @@ func TestLocalConnection(t *testing.T) {
 	//err := TestConnection() // locally
 	err := TestConnectionHost(defaultConnectionString)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 }
 
