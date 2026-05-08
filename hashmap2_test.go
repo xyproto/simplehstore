@@ -1,17 +1,15 @@
 package simplehstore
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"io"
+	"slices"
 	"testing"
 
-	// For testing the storage of bcrypt password hashes
-	"golang.org/x/crypto/bcrypt"
-
-	"crypto/sha256"
-	"io"
-
 	"github.com/xyproto/cookie/v2"
-	"github.com/xyproto/pinterface"
+	"github.com/xyproto/pinterface/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestHashMap2UserStateShort(t *testing.T) {
@@ -442,7 +440,7 @@ func TestHashMap2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if !hasS(usernames, "john") && !hasS(usernames, "beatrice") {
+	if !slices.Contains(usernames, "john") && !slices.Contains(usernames, "beatrice") {
 		all := map[string]map[string]string{
 			"john": map[string]string{
 				"number":   "256",

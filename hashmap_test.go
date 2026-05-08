@@ -1,17 +1,13 @@
 package simplehstore
 
 import (
-	"fmt"
-	"testing"
-
-	// For testing the storage of bcrypt password hashes
-	"golang.org/x/crypto/bcrypt"
-
 	"crypto/sha256"
-	"io"
-
+	"fmt"
 	"github.com/xyproto/cookie/v2"
-	"github.com/xyproto/pinterface"
+	"github.com/xyproto/pinterface/v2"
+	"golang.org/x/crypto/bcrypt"
+	"io"
+	"testing"
 )
 
 const hashmapname = "testhashmap"
