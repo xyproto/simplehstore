@@ -1,7 +1,14 @@
-# github.com/lib/pq v1.10.9
-## explicit; go 1.13
+# github.com/lib/pq v1.12.3
+## explicit; go 1.21
 github.com/lib/pq
+github.com/lib/pq/internal/pgpass
+github.com/lib/pq/internal/pgservice
+github.com/lib/pq/internal/pqsql
+github.com/lib/pq/internal/pqtime
+github.com/lib/pq/internal/pqutil
+github.com/lib/pq/internal/proto
 github.com/lib/pq/oid
+github.com/lib/pq/pqerror
 github.com/lib/pq/scram
 # github.com/xyproto/ask v1.0.0
 ## explicit; go 1.12
@@ -9,12 +16,12 @@ github.com/xyproto/ask
 # github.com/xyproto/cookie/v2 v2.2.7
 ## explicit; go 1.17
 github.com/xyproto/cookie/v2
-# github.com/xyproto/env/v2 v2.5.3
+# github.com/xyproto/env/v2 v2.5.6
 ## explicit; go 1.19
 github.com/xyproto/env/v2
-# github.com/xyproto/pinterface v1.5.4
+# github.com/xyproto/pinterface/v2 v2.1.2
 ## explicit; go 1.8
-github.com/xyproto/pinterface
+github.com/xyproto/pinterface/v2
 # github.com/xyproto/randomstring v1.2.0
 ## explicit; go 1.17
 github.com/xyproto/randomstring
